@@ -1,5 +1,5 @@
 site:
-  title: Automated Multi-Language LLM Evaluation Pipeline
+  title: Automated Multi Language LLM Evaluation Pipeline
   start_page: genai-amep::index.adoc
 
 content:

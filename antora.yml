@@ -1,5 +1,5 @@
-name: Automated Multi-Language LLM Evaluation Pipeline
-title: Automated Multi-Language LLM Evaluation Pipeline
+name: Automated Multi Language LLM Evaluation Pipeline
+title: Automated Multi Language LLM Evaluation Pipeline
 version: 1
 nav:
 - modules/ROOT/nav.adoc
