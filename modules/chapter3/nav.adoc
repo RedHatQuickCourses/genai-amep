@@ -1,5 +1,0 @@
-* xref:index.adoc[Model Evaluation]
-** xref:multilang-evaluation.adoc[Multi-Language Evaluation]
-** xref:trustyai-integration.adoc[TrustyAI Bias and Fairness Testing]
-** xref:s3-storage.adoc[Storing Results in S3]
-** xref:results-analysis.adoc[Analyzing and Visualizing Results]

@@ -1,5 +1,3 @@
 * xref:index.adoc[Model Preparation]
-** xref:downloading-models.adoc[Downloading Models from HuggingFace]
-** xref:model-compression.adoc[Model Compression]
-** xref:modelcar-packaging.adoc[Modelcar Container Packaging]
-** xref:model-registry.adoc[Model Registry Integration]
+** xref:architecture.adoc[Downloading Models from HuggingFace]
+** xref:multilang-evaluation.adoc[Model Compression]
