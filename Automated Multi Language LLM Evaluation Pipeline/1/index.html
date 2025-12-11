@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>Automated Multi-Language LLM Evaluation Pipeline :: Automated Multi Language LLM Evaluation Pipeline</title>
+    <link rel="next" href="chapter1/index.html">
+    <meta name="generator" content="Antora 3.1.3">
+    <link rel="stylesheet" href="../../_/css/site.css">
+    <script>var uiRootPath = '../../_'</script>
+  </head>
+  <body class="article">
+<header class="header">
+  <nav class="navbar">
+    <div class="navbar-brand">
+      <a class="navbar-item" href="https://www.redhat.com" target="_blank"><img src="../../_/img/redhat-logo.png" height="40px" alt="Red Hat"></a>
+      <a class="navbar-item" style="font-size: 24px; color: white" href="../..">Automated Multi Language LLM Evaluation Pipeline</a>
+      <button class="navbar-burger" data-target="topbar-nav">
+        <span></span>
+        <span></span>
+        <span></span>
+      </button>
+    </div>
+    <div id="topbar-nav" class="navbar-menu">
+      <div class="navbar-end">
+        <a class="navbar-item" href="https://github.com/RedHatQuickCourses/changeme/issues" target="_blank">Report Issues</a>
+      </div>
+    </div>
+  </nav>
+</header><div class="body">
+<div class="nav-container" data-component="Automated Multi Language LLM Evaluation Pipeline" data-version="1">
+  <aside class="nav">
+    <div class="panels">
+<div class="nav-panel-menu is-active" data-panel="menu">
+  <nav class="nav-menu">
+    <h3 class="title"><a href="index.html">Automated Multi Language LLM Evaluation Pipeline</a></h3>
+<ul class="nav-list">
+  <li class="nav-item" data-depth="0">
+<ul class="nav-list">
+  <li class="nav-item is-current-page" data-depth="1">
+    <a class="nav-link" href="index.html">Introduction</a>
+  </li>
+</ul>
+  </li>
+  <li class="nav-item" data-depth="0">
+<ul class="nav-list">
+  <li class="nav-item" data-depth="1">
+    <button class="nav-item-toggle"></button>
+    <a class="nav-link" href="chapter1/index.html">Model Preparation</a>
+<ul class="nav-list">
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="chapter1/architecture.html">Downloading Models from HuggingFace</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="chapter1/multilang-evaluation.html">Model Compression</a>
+  </li>
+</ul>
+  </li>
+</ul>
+  </li>
+</ul>
+  </nav>
+</div>
+<div class="nav-panel-explore" data-panel="explore">
+  <div class="context">
+    <span class="title">Automated Multi Language LLM Evaluation Pipeline</span>
+    <span class="version">1</span>
+  </div>
+  <ul class="components">
+    <li class="component is-current">
+      <a class="title" href="index.html">Automated Multi Language LLM Evaluation Pipeline</a>
+      <ul class="versions">
+        <li class="version is-current is-latest">
+          <a href="index.html">1</a>
+        </li>
+      </ul>
+    </li>
+  </ul>
+</div>
+    </div>
+  </aside>
+</div>
+<main class="article">
+<div class="toolbar" role="navigation">
+<button class="nav-toggle"></button>
+<nav class="breadcrumbs" aria-label="breadcrumbs">
+  <ul>
+    <li><a href="index.html">Automated Multi Language LLM Evaluation Pipeline</a></li>
+    <li><a href="index.html">Introduction</a></li>
+  </ul>
+</nav>
+</div>
+  <div class="content">
+<aside class="toc sidebar" data-title="Contents" data-levels="2">
+  <div class="toc-menu"></div>
+</aside>
+<article class="doc">
+<h1 class="page">Automated Multi-Language LLM Evaluation Pipeline</h1>
+<div class="sect1">
+<h2 id="_overview"><a class="anchor" href="#_overview"></a>Overview</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>This guide documents an automated pipeline for evaluating Large Language Models (LLMs) across multiple languages using Red Hat OpenShift AI as the platform.</p>
+</div>
+<div class="paragraph">
+<p><strong>Developed by</strong>: Red Hat AI Customer Adoption and Innovation team (CAI)</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_what_this_pipeline_does"><a class="anchor" href="#_what_this_pipeline_does"></a>What This Pipeline Does</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>This automated solution provides end-to-end capabilities for:</p>
+</div>
+<div class="olist arabic">
+<ol class="arabic">
+<li>
+<p><strong>Model Acquisition</strong>: Download models from HuggingFace Hub</p>
+</li>
+<li>
+<p><strong>Model Optimization</strong>: Optional compression using llmcompressor</p>
+</li>
+<li>
+<p><strong>Container Packaging</strong>: Package models in Modelcar OCI containers</p>
+</li>
+<li>
+<p><strong>Registry Management</strong>: Register models in OpenShift AI Model Registry</p>
+</li>
+<li>
+<p><strong>Model Deployment</strong>: Deploy models using vLLM runtime for inference</p>
+</li>
+<li>
+<p><strong>Multi-Language Evaluation</strong>: Test model performance across English, Spanish, and Japanese</p>
+</li>
+<li>
+<p><strong>Bias Detection</strong>: Optional TrustyAI integration for fairness testing</p>
+</li>
+<li>
+<p><strong>Results Storage</strong>: Store evaluation results in S3-compatible storage</p>
+</li>
+<li>
+<p><strong>Results Analysis</strong>: Visualize and compare results using Jupyter notebooks</p>
+</li>
+</ol>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_key_features"><a class="anchor" href="#_key_features"></a>Key Features</h2>
+<div class="sectionbody">
+<div class="sect2">
+<h3 id="_multi_language_support"><a class="anchor" href="#_multi_language_support"></a>Multi-Language Support</h3>
+<div class="paragraph">
+<p>Evaluate your models across three languages:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p><strong>English (en)</strong>: Standard benchmarks including ARC-Easy, HellaSwag, WinoGrande, TruthfulQA</p>
+</li>
+<li>
+<p><strong>Spanish (es)</strong>: BELEBELE Spanish, XNLI Spanish</p>
+</li>
+<li>
+<p><strong>Japanese (ja)</strong>: BELEBELE Japanese, XNLI Japanese</p>
+</li>
+</ul>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_automated_workflow"><a class="anchor" href="#_automated_workflow"></a>Automated Workflow</h3>
+<div class="paragraph">
+<p>The entire pipeline is automated using Tekton on OpenShift, allowing you to:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p>Run evaluations with a single command</p>
+</li>
+<li>
+<p>Skip specific steps as needed</p>
+</li>
+<li>
+<p>Track progress through the OpenShift Console</p>
+</li>
+<li>
+<p>Store and compare results over time</p>
+</li>
+</ul>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_flexible_configuration"><a class="anchor" href="#_flexible_configuration"></a>Flexible Configuration</h3>
+<div class="ulist">
+<ul>
+<li>
+<p>Enable/disable specific evaluation types</p>
+</li>
+<li>
+<p>Configure S3 storage for results</p>
+</li>
+<li>
+<p>Adjust vLLM parameters for your hardware</p>
+</li>
+<li>
+<p>Choose which languages to evaluate</p>
+</li>
+</ul>
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_pipeline_components"><a class="anchor" href="#_pipeline_components"></a>Pipeline Components</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>The pipeline consists of several integrated components working together:</p>
+</div>
+<div class="olist arabic">
+<ol class="arabic">
+<li>
+<p><strong>Model Download</strong>: Pulls models from HuggingFace Hub</p>
+</li>
+<li>
+<p><strong>Model Compression</strong>: Optional weight quantization for efficiency</p>
+</li>
+<li>
+<p><strong>Modelcar Packaging</strong>: Creates OCI container images with embedded models</p>
+</li>
+<li>
+<p><strong>Model Registry</strong>: Manages model versions and metadata</p>
+</li>
+<li>
+<p><strong>vLLM Deployment</strong>: Serves models with high-performance inference</p>
+</li>
+<li>
+<p><strong>Multi-Language Evaluation</strong>: Runs benchmarks across languages</p>
+</li>
+<li>
+<p><strong>TrustyAI Integration</strong>: Tests for bias and fairness (optional)</p>
+</li>
+<li>
+<p><strong>S3 Storage</strong>: Persists results for historical comparison</p>
+</li>
+<li>
+<p><strong>Jupyter Analysis</strong>: Visualizes performance across languages</p>
+</li>
+</ol>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_who_should_use_this"><a class="anchor" href="#_who_should_use_this"></a>Who Should Use This</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>This pipeline is designed for:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p><strong>ML Engineers</strong>: Evaluating model performance across languages</p>
+</li>
+<li>
+<p><strong>AI Platform Teams</strong>: Standardizing model evaluation workflows</p>
+</li>
+<li>
+<p><strong>Data Scientists</strong>: Comparing model variants and optimizations</p>
+</li>
+<li>
+<p><strong>Quality Assurance</strong>: Testing models for bias and fairness</p>
+</li>
+</ul>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_next_steps"><a class="anchor" href="#_next_steps"></a>Next Steps</h2>
+<div class="sectionbody">
+<div class="olist arabic">
+<ol class="arabic">
+<li>
+<p>Review the <a href="#architecture.adoc" class="xref unresolved">Pipeline Architecture</a></p>
+</li>
+<li>
+<p>Check <a href="#prerequisites.adoc" class="xref unresolved">Prerequisites</a> for your environment</p>
+</li>
+<li>
+<p>Follow the <a href="chapter1/index.html" class="xref page">Model Preparation</a> guide to get started</p>
+</li>
+</ol>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_support_and_contribution"><a class="anchor" href="#_support_and_contribution"></a>Support and Contribution</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>For issues, questions, or contributions, contact the Red Hat AI Customer Adoption and Innovation team (CAI).</p>
+</div>
+</div>
+</div>
+<nav class="pagination">
+  <span class="next"><a href="chapter1/index.html">Model Preparation</a></span>
+</nav>
+</article>
+  </div>
+</main>
+</div>
+<footer class="footer">
+  <img src="../../_/img/rhl-logo-red.png" height="40px" alt="Red Hat"  href="https://redhat.com" >
+</footer><script id="site-script" src="../../_/js/site.js" data-ui-root-path="../../_"></script>
+<script async src="../../_/js/vendor/highlight.js"></script>
+  </body>
+</html>

@@ -1,0 +1,773 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>Multi-Language Evaluation :: Automated Multi Language LLM Evaluation Pipeline</title>
+    <link rel="prev" href="architecture.html">
+    <meta name="generator" content="Antora 3.1.3">
+    <link rel="stylesheet" href="../../../_/css/site.css">
+    <script>var uiRootPath = '../../../_'</script>
+  </head>
+  <body class="article">
+<header class="header">
+  <nav class="navbar">
+    <div class="navbar-brand">
+      <a class="navbar-item" href="https://www.redhat.com" target="_blank"><img src="../../../_/img/redhat-logo.png" height="40px" alt="Red Hat"></a>
+      <a class="navbar-item" style="font-size: 24px; color: white" href="../../..">Automated Multi Language LLM Evaluation Pipeline</a>
+      <button class="navbar-burger" data-target="topbar-nav">
+        <span></span>
+        <span></span>
+        <span></span>
+      </button>
+    </div>
+    <div id="topbar-nav" class="navbar-menu">
+      <div class="navbar-end">
+        <a class="navbar-item" href="https://github.com/RedHatQuickCourses/changeme/issues" target="_blank">Report Issues</a>
+      </div>
+    </div>
+  </nav>
+</header><div class="body">
+<div class="nav-container" data-component="Automated Multi Language LLM Evaluation Pipeline" data-version="1">
+  <aside class="nav">
+    <div class="panels">
+<div class="nav-panel-menu is-active" data-panel="menu">
+  <nav class="nav-menu">
+    <h3 class="title"><a href="../index.html">Automated Multi Language LLM Evaluation Pipeline</a></h3>
+<ul class="nav-list">
+  <li class="nav-item" data-depth="0">
+<ul class="nav-list">
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../index.html">Introduction</a>
+  </li>
+</ul>
+  </li>
+  <li class="nav-item" data-depth="0">
+<ul class="nav-list">
+  <li class="nav-item" data-depth="1">
+    <button class="nav-item-toggle"></button>
+    <a class="nav-link" href="index.html">Model Preparation</a>
+<ul class="nav-list">
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="architecture.html">Downloading Models from HuggingFace</a>
+  </li>
+  <li class="nav-item is-current-page" data-depth="2">
+    <a class="nav-link" href="multilang-evaluation.html">Model Compression</a>
+  </li>
+</ul>
+  </li>
+</ul>
+  </li>
+</ul>
+  </nav>
+</div>
+<div class="nav-panel-explore" data-panel="explore">
+  <div class="context">
+    <span class="title">Automated Multi Language LLM Evaluation Pipeline</span>
+    <span class="version">1</span>
+  </div>
+  <ul class="components">
+    <li class="component is-current">
+      <a class="title" href="../index.html">Automated Multi Language LLM Evaluation Pipeline</a>
+      <ul class="versions">
+        <li class="version is-current is-latest">
+          <a href="../index.html">1</a>
+        </li>
+      </ul>
+    </li>
+  </ul>
+</div>
+    </div>
+  </aside>
+</div>
+<main class="article">
+<div class="toolbar" role="navigation">
+<button class="nav-toggle"></button>
+<nav class="breadcrumbs" aria-label="breadcrumbs">
+  <ul>
+    <li><a href="../index.html">Automated Multi Language LLM Evaluation Pipeline</a></li>
+    <li><a href="index.html">Model Preparation</a></li>
+    <li><a href="multilang-evaluation.html">Model Compression</a></li>
+  </ul>
+</nav>
+</div>
+  <div class="content">
+<aside class="toc sidebar" data-title="Contents" data-levels="2">
+  <div class="toc-menu"></div>
+</aside>
+<article class="doc">
+<h1 class="page">Multi-Language Evaluation</h1>
+<div class="sect1">
+<h2 id="_overview"><a class="anchor" href="#_overview"></a>Overview</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>The Multi-Language Evaluation component tests your LLM&#8217;s performance across English, Spanish, and Japanese using standardized benchmarks.</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_why_multi_language_evaluation"><a class="anchor" href="#_why_multi_language_evaluation"></a>Why Multi-Language Evaluation?</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>Testing models across languages helps you:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p>Identify language-specific performance gaps</p>
+</li>
+<li>
+<p>Ensure consistent quality across user bases</p>
+</li>
+<li>
+<p>Detect potential biases in multilingual contexts</p>
+</li>
+<li>
+<p>Validate model localization efforts</p>
+</li>
+</ul>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_supported_languages"><a class="anchor" href="#_supported_languages"></a>Supported Languages</h2>
+<div class="sectionbody">
+<table class="tableblock frame-all grid-all stretch">
+<colgroup>
+<col style="width: 16.6666%;">
+<col style="width: 33.3333%;">
+<col style="width: 50.0001%;">
+</colgroup>
+<thead>
+<tr>
+<th class="tableblock halign-left valign-top">Language Code</th>
+<th class="tableblock halign-left valign-top">Language</th>
+<th class="tableblock halign-left valign-top">Benchmarks</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>en</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">English</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">ARC-Easy, HellaSwag, WinoGrande, TruthfulQA</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>es</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Spanish (Español)</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">BELEBELE Spanish, XNLI Spanish</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>ja</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Japanese (日本語)</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">BELEBELE Japanese, XNLI Japanese</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_benchmark_details"><a class="anchor" href="#_benchmark_details"></a>Benchmark Details</h2>
+<div class="sectionbody">
+<div class="sect2">
+<h3 id="_english_benchmarks"><a class="anchor" href="#_english_benchmarks"></a>English Benchmarks</h3>
+<div class="sect3">
+<h4 id="_arc_easy"><a class="anchor" href="#_arc_easy"></a>ARC-Easy</h4>
+<div class="ulist">
+<ul>
+<li>
+<p><strong>Description</strong>: Grade-school level science questions</p>
+</li>
+<li>
+<p><strong>Metric</strong>: Accuracy</p>
+</li>
+<li>
+<p><strong>Tasks</strong>: Multiple-choice question answering</p>
+</li>
+<li>
+<p><strong>Why it matters</strong>: Tests fundamental reasoning and knowledge retrieval</p>
+</li>
+</ul>
+</div>
+</div>
+<div class="sect3">
+<h4 id="_hellaswag"><a class="anchor" href="#_hellaswag"></a>HellaSwag</h4>
+<div class="ulist">
+<ul>
+<li>
+<p><strong>Description</strong>: Commonsense reasoning about everyday situations</p>
+</li>
+<li>
+<p><strong>Metric</strong>: Accuracy (normalized)</p>
+</li>
+<li>
+<p><strong>Tasks</strong>: Sentence completion</p>
+</li>
+<li>
+<p><strong>Why it matters</strong>: Evaluates common sense and world knowledge</p>
+</li>
+</ul>
+</div>
+</div>
+<div class="sect3">
+<h4 id="_winogrande"><a class="anchor" href="#_winogrande"></a>WinoGrande</h4>
+<div class="ulist">
+<ul>
+<li>
+<p><strong>Description</strong>: Pronoun resolution requiring commonsense reasoning</p>
+</li>
+<li>
+<p><strong>Metric</strong>: Accuracy</p>
+</li>
+<li>
+<p><strong>Tasks</strong>: Fill-in-the-blank with pronouns</p>
+</li>
+<li>
+<p><strong>Why it matters</strong>: Tests understanding of context and entities</p>
+</li>
+</ul>
+</div>
+</div>
+<div class="sect3">
+<h4 id="_truthfulqa"><a class="anchor" href="#_truthfulqa"></a>TruthfulQA</h4>
+<div class="ulist">
+<ul>
+<li>
+<p><strong>Description</strong>: Questions designed to test truthfulness</p>
+</li>
+<li>
+<p><strong>Metric</strong>: Multiple-choice accuracy</p>
+</li>
+<li>
+<p><strong>Tasks</strong>: Identify truthful answers</p>
+</li>
+<li>
+<p><strong>Why it matters</strong>: Measures model&#8217;s tendency to generate factual responses</p>
+</li>
+</ul>
+</div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_spanish_benchmarks"><a class="anchor" href="#_spanish_benchmarks"></a>Spanish Benchmarks</h3>
+<div class="sect3">
+<h4 id="_belebele_spanish"><a class="anchor" href="#_belebele_spanish"></a>BELEBELE Spanish</h4>
+<div class="ulist">
+<ul>
+<li>
+<p><strong>Description</strong>: Reading comprehension in Spanish</p>
+</li>
+<li>
+<p><strong>Metric</strong>: Accuracy</p>
+</li>
+<li>
+<p><strong>Tasks</strong>: Answer questions about passages</p>
+</li>
+<li>
+<p><strong>Why it matters</strong>: Tests language understanding in Spanish</p>
+</li>
+</ul>
+</div>
+</div>
+<div class="sect3">
+<h4 id="_xnli_spanish"><a class="anchor" href="#_xnli_spanish"></a>XNLI Spanish</h4>
+<div class="ulist">
+<ul>
+<li>
+<p><strong>Description</strong>: Cross-lingual natural language inference</p>
+</li>
+<li>
+<p><strong>Metric</strong>: Accuracy</p>
+</li>
+<li>
+<p><strong>Tasks</strong>: Determine entailment, contradiction, or neutral</p>
+</li>
+<li>
+<p><strong>Why it matters</strong>: Evaluates logical reasoning in Spanish</p>
+</li>
+</ul>
+</div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_japanese_benchmarks"><a class="anchor" href="#_japanese_benchmarks"></a>Japanese Benchmarks</h3>
+<div class="sect3">
+<h4 id="_belebele_japanese"><a class="anchor" href="#_belebele_japanese"></a>BELEBELE Japanese</h4>
+<div class="ulist">
+<ul>
+<li>
+<p><strong>Description</strong>: Reading comprehension in Japanese</p>
+</li>
+<li>
+<p><strong>Metric</strong>: Accuracy</p>
+</li>
+<li>
+<p><strong>Tasks</strong>: Answer questions about passages</p>
+</li>
+<li>
+<p><strong>Why it matters</strong>: Tests language understanding in Japanese</p>
+</li>
+</ul>
+</div>
+</div>
+<div class="sect3">
+<h4 id="_xnli_japanese"><a class="anchor" href="#_xnli_japanese"></a>XNLI Japanese</h4>
+<div class="ulist">
+<ul>
+<li>
+<p><strong>Description</strong>: Cross-lingual natural language inference</p>
+</li>
+<li>
+<p><strong>Metric</strong>: Accuracy</p>
+</li>
+<li>
+<p><strong>Tasks</strong>: Determine entailment, contradiction, or neutral</p>
+</li>
+<li>
+<p><strong>Why it matters</strong>: Evaluates logical reasoning in Japanese</p>
+</li>
+</ul>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_running_the_evaluation"><a class="anchor" href="#_running_the_evaluation"></a>Running the Evaluation</h2>
+<div class="sectionbody">
+<div class="sect2">
+<h3 id="_prerequisites"><a class="anchor" href="#_prerequisites"></a>Prerequisites</h3>
+<div class="paragraph">
+<p>Before running multi-language evaluation:</p>
+</div>
+<div class="olist arabic">
+<ol class="arabic">
+<li>
+<p>Model must be deployed as an InferenceService</p>
+</li>
+<li>
+<p>InferenceService must be in "Ready" state</p>
+</li>
+<li>
+<p>Sufficient GPU resources available for evaluation</p>
+</li>
+<li>
+<p>(Optional) S3 storage configured for result persistence</p>
+</li>
+</ol>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_configuration_parameters"><a class="anchor" href="#_configuration_parameters"></a>Configuration Parameters</h3>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-yaml hljs" data-lang="yaml"># Enable multi-language evaluation
+MULTILANG_EVALUATE_MODEL: "true"
+
+# Languages to evaluate (comma-separated)
+# Options: en, es, ja
+LANGUAGES: "en,es,ja"
+
+# Enable S3 upload of results
+S3_ENABLED: "false"</code></pre>
+</div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_running_via_pipeline"><a class="anchor" href="#_running_via_pipeline"></a>Running via Pipeline</h3>
+<div class="paragraph">
+<p>To run the full pipeline with multi-language evaluation:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash"># Apply the pipeline tasks
+oc apply -f openshift/modelcar-multilang-evaluate-task.yaml
+
+# Run the pipeline with multi-language evaluation enabled
+oc create -f - &lt;&lt;EOF
+apiVersion: tekton.dev/v1beta1
+kind: PipelineRun
+metadata:
+  generateName: modelcar-run-
+spec:
+  pipelineRef:
+    name: modelcar-pipeline
+  params:
+    - name: HUGGINGFACE_MODEL
+      value: "ibm-granite/granite-3.2-2b-instruct"
+    - name: OCI_IMAGE
+      value: "quay.io/your-org/granite-3.2-2b"
+    - name: MODEL_NAME
+      value: "granite-3.2-2b"
+    - name: MODEL_VERSION
+      value: "1.0.0"
+    - name: DEPLOY_MODEL
+      value: "true"
+    - name: MULTILANG_EVALUATE_MODEL
+      value: "true"
+    - name: LANGUAGES
+      value: "en,es,ja"
+    - name: S3_ENABLED
+      value: "false"
+  workspaces:
+    - name: shared-workspace
+      volumeClaimTemplate:
+        spec:
+          accessModes:
+            - ReadWriteOnce
+          resources:
+            requests:
+              storage: 100Gi
+    - name: quay-auth-workspace
+      secret:
+        secretName: quay-auth
+EOF</code></pre>
+</div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_running_standalone"><a class="anchor" href="#_running_standalone"></a>Running Standalone</h3>
+<div class="paragraph">
+<p>To run evaluation on an already-deployed model:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash"># Create a TaskRun
+oc create -f - &lt;&lt;EOF
+apiVersion: tekton.dev/v1beta1
+kind: TaskRun
+metadata:
+  generateName: multilang-eval-
+spec:
+  taskRef:
+    name: multilang-evaluate-model
+  params:
+    - name: EVALUATE_MODEL
+      value: "true"
+    - name: MODEL_NAME
+      value: "granite-3.2-2b"
+    - name: MODEL_VERSION
+      value: "1.0.0"
+    - name: LANGUAGES
+      value: "en,es,ja"
+    - name: S3_ENABLED
+      value: "false"
+    - name: SKIP_TASK
+      value: ""
+    - name: SKIP_TASKS
+      value: ""
+  workspaces:
+    - name: shared-workspace
+      persistentVolumeClaim:
+        claimName: evaluation-workspace
+EOF</code></pre>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_evaluation_results"><a class="anchor" href="#_evaluation_results"></a>Evaluation Results</h2>
+<div class="sectionbody">
+<div class="sect2">
+<h3 id="_result_structure"><a class="anchor" href="#_result_structure"></a>Result Structure</h3>
+<div class="paragraph">
+<p>Results are saved in the shared workspace:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-none hljs">/workspace/shared-workspace/multilang_evaluation_results/
+├── cross_language_summary.json     # Overall summary
+├── en/                             # English results
+│   ├── results.json
+│   ├── metadata.json
+│   └── samples/
+├── es/                             # Spanish results
+│   ├── results.json
+│   ├── metadata.json
+│   └── samples/
+└── ja/                             # Japanese results
+    ├── results.json
+    ├── metadata.json
+    └── samples/</code></pre>
+</div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_sample_results_format"><a class="anchor" href="#_sample_results_format"></a>Sample Results Format</h3>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-json hljs" data-lang="json">{
+  "model_name": "granite-3.2-2b",
+  "model_version": "1.0.0",
+  "timestamp": "20231210_143022",
+  "languages": {
+    "en": {
+      "arc_easy": {
+        "acc": 0.7823,
+        "acc_norm": 0.7654
+      },
+      "hellaswag": {
+        "acc": 0.6234,
+        "acc_norm": 0.6890
+      }
+    },
+    "es": {
+      "belebele_spa_Latn": {
+        "acc": 0.6543
+      },
+      "xnli_es": {
+        "acc": 0.7123
+      }
+    },
+    "ja": {
+      "belebele_jpn_Jpan": {
+        "acc": 0.6012
+      },
+      "xnli_ja": {
+        "acc": 0.6789
+      }
+    }
+  }
+}</code></pre>
+</div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_interpreting_results"><a class="anchor" href="#_interpreting_results"></a>Interpreting Results</h3>
+<div class="sect3">
+<h4 id="_accuracy_metrics"><a class="anchor" href="#_accuracy_metrics"></a>Accuracy Metrics</h4>
+<div class="ulist">
+<ul>
+<li>
+<p><strong>acc</strong>: Raw accuracy (0.0 to 1.0)</p>
+</li>
+<li>
+<p><strong>acc_norm</strong>: Normalized accuracy (length-normalized for some tasks)</p>
+</li>
+<li>
+<p>Higher is better for all metrics</p>
+</li>
+</ul>
+</div>
+</div>
+<div class="sect3">
+<h4 id="_performance_benchmarks"><a class="anchor" href="#_performance_benchmarks"></a>Performance Benchmarks</h4>
+<div class="paragraph">
+<p>Typical ranges for different model sizes:</p>
+</div>
+<table class="tableblock frame-all grid-all stretch">
+<colgroup>
+<col style="width: 14.2857%;">
+<col style="width: 28.5714%;">
+<col style="width: 28.5714%;">
+<col style="width: 28.5715%;">
+</colgroup>
+<thead>
+<tr>
+<th class="tableblock halign-left valign-top">Model Size</th>
+<th class="tableblock halign-left valign-top">English (avg)</th>
+<th class="tableblock halign-left valign-top">Spanish (avg)</th>
+<th class="tableblock halign-left valign-top">Japanese (avg)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">2B parameters</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0.60 - 0.70</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0.55 - 0.65</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0.50 - 0.60</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">7B parameters</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0.70 - 0.80</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0.65 - 0.75</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0.60 - 0.70</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">13B+ parameters</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0.75 - 0.85</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0.70 - 0.80</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0.65 - 0.75</p></td>
+</tr>
+</tbody>
+</table>
+<div class="admonitionblock note">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-note" title="Note"></i>
+</td>
+<td class="content">
+These are approximate ranges. Actual performance depends on model architecture, training data, and fine-tuning.
+</td>
+</tr>
+</table>
+</div>
+</div>
+<div class="sect3">
+<h4 id="_language_performance_gaps"><a class="anchor" href="#_language_performance_gaps"></a>Language Performance Gaps</h4>
+<div class="paragraph">
+<p>It&#8217;s common to see performance gaps across languages:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p>English typically performs best (most training data)</p>
+</li>
+<li>
+<p>Spanish performance is usually 5-10% lower than English</p>
+</li>
+<li>
+<p>Japanese may show 10-15% lower performance than English</p>
+</li>
+</ul>
+</div>
+<div class="paragraph">
+<p>These gaps help identify:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p>Need for additional multilingual training</p>
+</li>
+<li>
+<p>Language-specific fine-tuning requirements</p>
+</li>
+<li>
+<p>Potential deployment considerations</p>
+</li>
+</ul>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_customizing_evaluations"><a class="anchor" href="#_customizing_evaluations"></a>Customizing Evaluations</h2>
+<div class="sectionbody">
+<div class="sect2">
+<h3 id="_adding_new_languages"><a class="anchor" href="#_adding_new_languages"></a>Adding New Languages</h3>
+<div class="paragraph">
+<p>To add support for additional languages, edit the task YAML:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-yaml hljs" data-lang="yaml"># In modelcar-multilang-evaluate-task.yaml
+declare -A LANGUAGE_TASKS
+LANGUAGE_TASKS[en]="arc_easy,hellaswag,winogrande,truthfulqa_mc2"
+LANGUAGE_TASKS[es]="belebele_spa_Latn,xnli_es"
+LANGUAGE_TASKS[ja]="belebele_jpn_Jpan,xnli_ja"
+LANGUAGE_TASKS[fr]="belebele_fra_Latn,xnli_fr"  # Add French</code></pre>
+</div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_modifying_benchmark_tasks"><a class="anchor" href="#_modifying_benchmark_tasks"></a>Modifying Benchmark Tasks</h3>
+<div class="paragraph">
+<p>To change which benchmarks are run:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-yaml hljs" data-lang="yaml"># Modify the task list for a language
+LANGUAGE_TASKS[en]="arc_easy,arc_challenge,mmlu"  # Add MMLU, remove others</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Available tasks can be found in the lm-evaluation-harness documentation.</p>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_adjusting_evaluation_parameters"><a class="anchor" href="#_adjusting_evaluation_parameters"></a>Adjusting Evaluation Parameters</h3>
+<div class="paragraph">
+<p>Key parameters that affect evaluation:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash"># Number of few-shot examples (0-5 typical)
+--num_fewshot 5
+
+# Batch size (affects speed and GPU memory)
+--batch_size 8
+
+# Limit number of samples (for testing)
+--limit 100</code></pre>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_troubleshooting"><a class="anchor" href="#_troubleshooting"></a>Troubleshooting</h2>
+<div class="sectionbody">
+<div class="sect2">
+<h3 id="_common_issues"><a class="anchor" href="#_common_issues"></a>Common Issues</h3>
+<div class="sect3">
+<h4 id="_gpu_out_of_memory"><a class="anchor" href="#_gpu_out_of_memory"></a>GPU Out of Memory</h4>
+<div class="paragraph">
+<p><strong>Symptom</strong>: Task fails with CUDA OOM error</p>
+</div>
+<div class="paragraph">
+<p><strong>Solutions</strong>:
+* Reduce batch size in task configuration
+* Reduce max_model_len for the model
+* Use model compression before evaluation</p>
+</div>
+</div>
+<div class="sect3">
+<h4 id="_task_timeout"><a class="anchor" href="#_task_timeout"></a>Task Timeout</h4>
+<div class="paragraph">
+<p><strong>Symptom</strong>: Task exceeds timeout and is terminated</p>
+</div>
+<div class="paragraph">
+<p><strong>Solutions</strong>:
+* Increase task timeout in pipeline YAML
+* Reduce number of evaluation samples
+* Use fewer languages in a single run</p>
+</div>
+</div>
+<div class="sect3">
+<h4 id="_missing_benchmarks"><a class="anchor" href="#_missing_benchmarks"></a>Missing Benchmarks</h4>
+<div class="paragraph">
+<p><strong>Symptom</strong>: Specific benchmark not found</p>
+</div>
+<div class="paragraph">
+<p><strong>Solutions</strong>:
+* Verify lm-eval version supports the benchmark
+* Check benchmark name spelling
+* Consult lm-evaluation-harness task list</p>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_next_steps"><a class="anchor" href="#_next_steps"></a>Next Steps</h2>
+<div class="sectionbody">
+<div class="ulist">
+<ul>
+<li>
+<p>Learn about <a href="#s3-storage.adoc" class="xref unresolved">Storing Results in S3</a></p>
+</li>
+<li>
+<p>Explore <a href="#results-analysis.adoc" class="xref unresolved">Analyzing and Visualizing Results</a></p>
+</li>
+<li>
+<p>Understand <a href="#trustyai-integration.adoc" class="xref unresolved">TrustyAI Integration</a></p>
+</li>
+</ul>
+</div>
+</div>
+</div>
+<nav class="pagination">
+  <span class="prev"><a href="architecture.html">Downloading Models from HuggingFace</a></span>
+</nav>
+</article>
+  </div>
+</main>
+</div>
+<footer class="footer">
+  <img src="../../../_/img/rhl-logo-red.png" height="40px" alt="Red Hat"  href="https://redhat.com" >
+</footer><script id="site-script" src="../../../_/js/site.js" data-ui-root-path="../../../_"></script>
+<script async src="../../../_/js/vendor/highlight.js"></script>
+  </body>
+</html>

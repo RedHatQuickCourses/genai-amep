@@ -1,0 +1,587 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>Pipeline Architecture :: Automated Multi Language LLM Evaluation Pipeline</title>
+    <link rel="prev" href="index.html">
+    <link rel="next" href="multilang-evaluation.html">
+    <meta name="generator" content="Antora 3.1.3">
+    <link rel="stylesheet" href="../../../_/css/site.css">
+    <script>var uiRootPath = '../../../_'</script>
+  </head>
+  <body class="article">
+<header class="header">
+  <nav class="navbar">
+    <div class="navbar-brand">
+      <a class="navbar-item" href="https://www.redhat.com" target="_blank"><img src="../../../_/img/redhat-logo.png" height="40px" alt="Red Hat"></a>
+      <a class="navbar-item" style="font-size: 24px; color: white" href="../../..">Automated Multi Language LLM Evaluation Pipeline</a>
+      <button class="navbar-burger" data-target="topbar-nav">
+        <span></span>
+        <span></span>
+        <span></span>
+      </button>
+    </div>
+    <div id="topbar-nav" class="navbar-menu">
+      <div class="navbar-end">
+        <a class="navbar-item" href="https://github.com/RedHatQuickCourses/changeme/issues" target="_blank">Report Issues</a>
+      </div>
+    </div>
+  </nav>
+</header><div class="body">
+<div class="nav-container" data-component="Automated Multi Language LLM Evaluation Pipeline" data-version="1">
+  <aside class="nav">
+    <div class="panels">
+<div class="nav-panel-menu is-active" data-panel="menu">
+  <nav class="nav-menu">
+    <h3 class="title"><a href="../index.html">Automated Multi Language LLM Evaluation Pipeline</a></h3>
+<ul class="nav-list">
+  <li class="nav-item" data-depth="0">
+<ul class="nav-list">
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../index.html">Introduction</a>
+  </li>
+</ul>
+  </li>
+  <li class="nav-item" data-depth="0">
+<ul class="nav-list">
+  <li class="nav-item" data-depth="1">
+    <button class="nav-item-toggle"></button>
+    <a class="nav-link" href="index.html">Model Preparation</a>
+<ul class="nav-list">
+  <li class="nav-item is-current-page" data-depth="2">
+    <a class="nav-link" href="architecture.html">Downloading Models from HuggingFace</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="multilang-evaluation.html">Model Compression</a>
+  </li>
+</ul>
+  </li>
+</ul>
+  </li>
+</ul>
+  </nav>
+</div>
+<div class="nav-panel-explore" data-panel="explore">
+  <div class="context">
+    <span class="title">Automated Multi Language LLM Evaluation Pipeline</span>
+    <span class="version">1</span>
+  </div>
+  <ul class="components">
+    <li class="component is-current">
+      <a class="title" href="../index.html">Automated Multi Language LLM Evaluation Pipeline</a>
+      <ul class="versions">
+        <li class="version is-current is-latest">
+          <a href="../index.html">1</a>
+        </li>
+      </ul>
+    </li>
+  </ul>
+</div>
+    </div>
+  </aside>
+</div>
+<main class="article">
+<div class="toolbar" role="navigation">
+<button class="nav-toggle"></button>
+<nav class="breadcrumbs" aria-label="breadcrumbs">
+  <ul>
+    <li><a href="../index.html">Automated Multi Language LLM Evaluation Pipeline</a></li>
+    <li><a href="index.html">Model Preparation</a></li>
+    <li><a href="architecture.html">Downloading Models from HuggingFace</a></li>
+  </ul>
+</nav>
+</div>
+  <div class="content">
+<aside class="toc sidebar" data-title="Contents" data-levels="2">
+  <div class="toc-menu"></div>
+</aside>
+<article class="doc">
+<h1 class="page">Pipeline Architecture</h1>
+<div class="sect1">
+<h2 id="_overview"><a class="anchor" href="#_overview"></a>Overview</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>The Automated Multi-Language LLM Evaluation Pipeline is built on Red Hat OpenShift AI and uses Tekton for workflow orchestration.</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_high_level_architecture"><a class="anchor" href="#_high_level_architecture"></a>High-Level Architecture</h2>
+<div class="sectionbody">
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-none hljs">┌─────────────────────────────────────────────────────────────────┐
+│                        HuggingFace Hub                          │
+└───────────────────────────────┬─────────────────────────────────┘
+                                │
+                                ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                     Model Download Task                         │
+│  - Downloads model weights and configuration                    │
+│  - Supports authentication tokens                               │
+│  - Selective file pattern matching                              │
+└───────────────────────────────┬─────────────────────────────────┘
+                                │
+                                ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                   Model Compression Task (Optional)             │
+│  - Uses llmcompressor for quantization                          │
+│  - Reduces model size and memory footprint                      │
+│  - Maintains acceptable accuracy levels                         │
+└───────────────────────────────┬─────────────────────────────────┘
+                                │
+                                ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                    Modelcar Packaging Task                      │
+│  - Creates OCI container with embedded model                    │
+│  - Uses OLOT for model layering                                 │
+│  - Pushes to container registry (Quay.io)                       │
+└───────────────────────────────┬─────────────────────────────────┘
+                                │
+                                ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                  Model Registry Integration                     │
+│  - Registers model version                                      │
+│  - Stores metadata and lineage                                  │
+│  - Enables model governance                                     │
+└───────────────────────────────┬─────────────────────────────────┘
+                                │
+                                ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                      vLLM Deployment                            │
+│  - Creates ServingRuntime                                       │
+│  - Deploys InferenceService                                     │
+│  - Configures GPU resources                                     │
+│  - Waits for service readiness                                  │
+└───────────────────────────────┬─────────────────────────────────┘
+                                │
+                ┌───────────────┴───────────────┐
+                │                               │
+                ▼                               ▼
+┌───────────────────────────┐   ┌──────────────────────────────┐
+│ Multi-Language Evaluation │   │   TrustyAI Evaluation        │
+│                           │   │                              │
+│ - English Benchmarks      │   │ - Gender Bias Detection      │
+│ - Spanish Benchmarks      │   │ - Multi-Language Fairness    │
+│ - Japanese Benchmarks     │   │ - Protected Attributes       │
+│ - Performance Metrics     │   │ - Bias Metrics               │
+└────────────┬──────────────┘   └────────────┬─────────────────┘
+             │                               │
+             └───────────────┬───────────────┘
+                             │
+                             ▼
+              ┌──────────────────────────────┐
+              │      S3 Storage              │
+              │                              │
+              │ - Results archival           │
+              │ - Historical comparison      │
+              │ - Metadata indexing          │
+              └──────────────┬───────────────┘
+                             │
+                             ▼
+              ┌──────────────────────────────┐
+              │   Jupyter Notebook Analysis  │
+              │                              │
+              │ - Data visualization         │
+              │ - Performance comparison     │
+              │ - Report generation          │
+              └──────────────────────────────┘</code></pre>
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_component_details"><a class="anchor" href="#_component_details"></a>Component Details</h2>
+<div class="sectionbody">
+<div class="sect2">
+<h3 id="_tekton_pipeline"><a class="anchor" href="#_tekton_pipeline"></a>Tekton Pipeline</h3>
+<div class="paragraph">
+<p>The pipeline is implemented as a Tekton Pipeline running on OpenShift:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p><strong>Orchestration</strong>: Coordinates task execution and dependencies</p>
+</li>
+<li>
+<p><strong>Workspaces</strong>: Shared storage for passing data between tasks</p>
+</li>
+<li>
+<p><strong>Parameters</strong>: Configurable options for runtime customization</p>
+</li>
+<li>
+<p><strong>Conditions</strong>: Conditional task execution based on parameters</p>
+</li>
+</ul>
+</div>
+<div class="sect3">
+<h4 id="_key_pipeline_parameters"><a class="anchor" href="#_key_pipeline_parameters"></a>Key Pipeline Parameters</h4>
+<table class="tableblock frame-all grid-all stretch">
+<colgroup>
+<col style="width: 25%;">
+<col style="width: 50%;">
+<col style="width: 25%;">
+</colgroup>
+<thead>
+<tr>
+<th class="tableblock halign-left valign-top">Parameter</th>
+<th class="tableblock halign-left valign-top">Description</th>
+<th class="tableblock halign-left valign-top">Default</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>HUGGINGFACE_MODEL</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">HuggingFace model repository (e.g., ibm-granite/granite-3.2-2b-instruct)</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Required</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>OCI_IMAGE</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Destination for modelcar image</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Required</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>COMPRESS_MODEL</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Enable model compression</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">false</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>DEPLOY_MODEL</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Deploy as InferenceService</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">false</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>MULTILANG_EVALUATE_MODEL</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Run multi-language evaluation</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">false</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>LANGUAGES</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Languages to evaluate (comma-separated)</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">en,es,ja</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>S3_ENABLED</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Upload results to S3</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">false</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>TRUSTYAI_EVALUATE_MODEL</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Run TrustyAI bias evaluation</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">false</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_model_download"><a class="anchor" href="#_model_download"></a>Model Download</h3>
+<div class="paragraph">
+<p>Downloads models from HuggingFace Hub using the <code>huggingface_hub</code> Python library:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p>Supports private models with authentication tokens</p>
+</li>
+<li>
+<p>Selective file downloading (e.g., only <code>.safetensors</code> files)</p>
+</li>
+<li>
+<p>Progress tracking and error handling</p>
+</li>
+</ul>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_model_compression"><a class="anchor" href="#_model_compression"></a>Model Compression</h3>
+<div class="paragraph">
+<p>Optional quantization using Neural Magic&#8217;s llmcompressor:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p>4-bit and 8-bit quantization support</p>
+</li>
+<li>
+<p>Maintains model accuracy</p>
+</li>
+<li>
+<p>Reduces memory footprint and improves inference speed</p>
+</li>
+</ul>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_modelcar_packaging"><a class="anchor" href="#_modelcar_packaging"></a>Modelcar Packaging</h3>
+<div class="paragraph">
+<p>Creates container images with embedded models using OLOT (OCI Layer Object Transport):</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p>Base image: Red Hat UBI9-micro</p>
+</li>
+<li>
+<p>Model files stored as OCI layers</p>
+</li>
+<li>
+<p>Compatible with OpenShift AI model serving</p>
+</li>
+</ul>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_vllm_deployment"><a class="anchor" href="#_vllm_deployment"></a>vLLM Deployment</h3>
+<div class="paragraph">
+<p>High-performance model serving using vLLM:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p>GPU acceleration (NVIDIA GPUs)</p>
+</li>
+<li>
+<p>OpenAI-compatible API endpoints</p>
+</li>
+<li>
+<p>Optimized for throughput and latency</p>
+</li>
+<li>
+<p>Configurable parameters (context length, batch size, etc.)</p>
+</li>
+</ul>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_multi_language_evaluation"><a class="anchor" href="#_multi_language_evaluation"></a>Multi-Language Evaluation</h3>
+<div class="paragraph">
+<p>Evaluates model performance across languages using lm-evaluation-harness:</p>
+</div>
+<div class="sect3">
+<h4 id="_evaluation_tasks_by_language"><a class="anchor" href="#_evaluation_tasks_by_language"></a>Evaluation Tasks by Language</h4>
+<div class="paragraph">
+<p><strong>English (en)</strong>:
+* ARC-Easy: Grade-school science questions
+* HellaSwag: Commonsense reasoning
+* WinoGrande: Pronoun resolution
+* TruthfulQA: Truthfulness assessment</p>
+</div>
+<div class="paragraph">
+<p><strong>Spanish (es)</strong>:
+* BELEBELE Spanish: Reading comprehension
+* XNLI Spanish: Natural language inference</p>
+</div>
+<div class="paragraph">
+<p><strong>Japanese (ja)</strong>:
+* BELEBELE Japanese: Reading comprehension
+* XNLI Japanese: Natural language inference</p>
+</div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_trustyai_integration"><a class="anchor" href="#_trustyai_integration"></a>TrustyAI Integration</h3>
+<div class="paragraph">
+<p>Optional bias and fairness evaluation:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p>Gender bias detection across languages</p>
+</li>
+<li>
+<p>Protected attribute analysis</p>
+</li>
+<li>
+<p>Fairness metrics computation</p>
+</li>
+<li>
+<p>Currently in template form (requires TrustyAI service deployment)</p>
+</li>
+</ul>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_s3_storage"><a class="anchor" href="#_s3_storage"></a>S3 Storage</h3>
+<div class="paragraph">
+<p>Results storage and management:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p>AWS S3 or S3-compatible storage (MinIO, etc.)</p>
+</li>
+<li>
+<p>Automatic result uploads</p>
+</li>
+<li>
+<p>Metadata tagging for easy retrieval</p>
+</li>
+<li>
+<p>Historical comparison support</p>
+</li>
+</ul>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_jupyter_notebook_analysis"><a class="anchor" href="#_jupyter_notebook_analysis"></a>Jupyter Notebook Analysis</h3>
+<div class="paragraph">
+<p>Interactive analysis and visualization:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p>Load results from local storage or S3</p>
+</li>
+<li>
+<p>Generate performance comparison charts</p>
+</li>
+<li>
+<p>Calculate language performance gaps</p>
+</li>
+<li>
+<p>Export reports in multiple formats</p>
+</li>
+</ul>
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_security_considerations"><a class="anchor" href="#_security_considerations"></a>Security Considerations</h2>
+<div class="sectionbody">
+<div class="sect2">
+<h3 id="_secrets_management"><a class="anchor" href="#_secrets_management"></a>Secrets Management</h3>
+<div class="paragraph">
+<p>The pipeline uses Kubernetes Secrets for sensitive data:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p><code>huggingface-secret</code>: HuggingFace API token</p>
+</li>
+<li>
+<p><code>quay-auth</code>: Container registry credentials</p>
+</li>
+<li>
+<p><code>s3-credentials</code>: S3 access keys</p>
+</li>
+</ul>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_service_accounts"><a class="anchor" href="#_service_accounts"></a>Service Accounts</h3>
+<div class="paragraph">
+<p>Custom service account (<code>modelcar-pipeline</code>) with appropriate RBAC permissions:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p>Create and manage InferenceServices</p>
+</li>
+<li>
+<p>Access Model Registry</p>
+</li>
+<li>
+<p>Read/write to shared workspaces</p>
+</li>
+</ul>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_network_policies"><a class="anchor" href="#_network_policies"></a>Network Policies</h3>
+<div class="ulist">
+<ul>
+<li>
+<p>Inference services are exposed through OpenShift Routes</p>
+</li>
+<li>
+<p>TrustyAI service communication over internal cluster network</p>
+</li>
+<li>
+<p>S3 access over HTTPS</p>
+</li>
+</ul>
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_resource_requirements"><a class="anchor" href="#_resource_requirements"></a>Resource Requirements</h2>
+<div class="sectionbody">
+<div class="sect2">
+<h3 id="_minimum_requirements"><a class="anchor" href="#_minimum_requirements"></a>Minimum Requirements</h3>
+<div class="ulist">
+<ul>
+<li>
+<p>OpenShift cluster with GPU nodes (NVIDIA)</p>
+</li>
+<li>
+<p>At least 1 GPU per inference service</p>
+</li>
+<li>
+<p>32GB RAM for evaluation tasks</p>
+</li>
+<li>
+<p>100GB persistent storage for workspaces</p>
+</li>
+</ul>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_recommended_configuration"><a class="anchor" href="#_recommended_configuration"></a>Recommended Configuration</h3>
+<div class="ulist">
+<ul>
+<li>
+<p>Multiple GPU nodes for high availability</p>
+</li>
+<li>
+<p>Dedicated namespace for model evaluation</p>
+</li>
+<li>
+<p>S3-compatible object storage</p>
+</li>
+<li>
+<p>Resource quotas configured</p>
+</li>
+</ul>
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_next_steps"><a class="anchor" href="#_next_steps"></a>Next Steps</h2>
+<div class="sectionbody">
+<div class="ulist">
+<ul>
+<li>
+<p>Review <a href="#prerequisites.adoc" class="xref unresolved">Prerequisites</a></p>
+</li>
+<li>
+<p>Learn about <a href="index.html" class="xref page">Model Preparation</a></p>
+</li>
+<li>
+<p>Understand <a href="../chapter2/index.html" class="xref page">Model Deployment</a></p>
+</li>
+<li>
+<p>Explore <a href="#chapter3:index.adoc" class="xref unresolved">Model Evaluation</a></p>
+</li>
+</ul>
+</div>
+</div>
+</div>
+<nav class="pagination">
+  <span class="prev"><a href="index.html">Model Preparation</a></span>
+  <span class="next"><a href="multilang-evaluation.html">Model Compression</a></span>
+</nav>
+</article>
+  </div>
+</main>
+</div>
+<footer class="footer">
+  <img src="../../../_/img/rhl-logo-red.png" height="40px" alt="Red Hat"  href="https://redhat.com" >
+</footer><script id="site-script" src="../../../_/js/site.js" data-ui-root-path="../../../_"></script>
+<script async src="../../../_/js/vendor/highlight.js"></script>
+  </body>
+</html>
