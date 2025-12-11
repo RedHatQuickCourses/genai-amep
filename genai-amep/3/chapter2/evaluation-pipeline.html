@@ -1,0 +1,1002 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>Evaluation Pipeline Deployment :: Automated Multi Language LLM Evaluation Pipeline</title>
+    <link rel="prev" href="modelcar-pipeline.html">
+    <meta name="generator" content="Antora 3.1.3">
+    <link rel="stylesheet" href="../../../_/css/site.css">
+    <script>var uiRootPath = '../../../_'</script>
+  </head>
+  <body class="article">
+<header class="header">
+  <nav class="navbar">
+    <div class="navbar-brand">
+      <a class="navbar-item" href="https://www.redhat.com" target="_blank"><img src="../../../_/img/redhat-logo.png" height="40px" alt="Red Hat"></a>
+      <a class="navbar-item" style="font-size: 24px; color: white" href="../../..">Automated Multi Language LLM Evaluation Pipeline</a>
+      <button class="navbar-burger" data-target="topbar-nav">
+        <span></span>
+        <span></span>
+        <span></span>
+      </button>
+    </div>
+    <div id="topbar-nav" class="navbar-menu">
+      <div class="navbar-end">
+        <a class="navbar-item" href="https://github.com/RedHatQuickCourses/changeme/issues" target="_blank">Report Issues</a>
+      </div>
+    </div>
+  </nav>
+</header><div class="body">
+<div class="nav-container" data-component="genai-amep" data-version="3">
+  <aside class="nav">
+    <div class="panels">
+<div class="nav-panel-menu is-active" data-panel="menu">
+  <nav class="nav-menu">
+    <h3 class="title"><a href="../index.html">Automated Multi-Language LLM Evaluation Pipeline</a></h3>
+<ul class="nav-list">
+  <li class="nav-item" data-depth="0">
+<ul class="nav-list">
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../index.html">Introduction</a>
+  </li>
+</ul>
+  </li>
+  <li class="nav-item" data-depth="0">
+<ul class="nav-list">
+  <li class="nav-item" data-depth="1">
+    <button class="nav-item-toggle"></button>
+    <a class="nav-link" href="../chapter1/index.html">Model Preparation</a>
+<ul class="nav-list">
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../chapter1/architecture.html">Downloading Models from HuggingFace</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../chapter1/multilang-evaluation.html">Model Compression</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <span class="nav-text">xref:section1.adoc</span>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <span class="nav-text">xref:section2.adoc</span>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <span class="nav-text">xref:section3.adoc</span>
+  </li>
+</ul>
+  </li>
+</ul>
+  </li>
+  <li class="nav-item" data-depth="0">
+<ul class="nav-list">
+  <li class="nav-item" data-depth="1">
+    <button class="nav-item-toggle"></button>
+    <a class="nav-link" href="index.html">Model Deployment</a>
+<ul class="nav-list">
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="deployment-overview.html">Deployment Overview</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="infrastructure-setup.html">Infrastructure Setup</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="modelcar-pipeline.html">ModelCar Pipeline Deployment</a>
+  </li>
+  <li class="nav-item is-current-page" data-depth="2">
+    <a class="nav-link" href="evaluation-pipeline.html">Evaluation Pipeline Deployment</a>
+  </li>
+</ul>
+  </li>
+</ul>
+  </li>
+</ul>
+  </nav>
+</div>
+<div class="nav-panel-explore" data-panel="explore">
+  <div class="context">
+    <span class="title">Automated Multi-Language LLM Evaluation Pipeline</span>
+    <span class="version">3</span>
+  </div>
+  <ul class="components">
+    <li class="component is-current">
+      <a class="title" href="../index.html">Automated Multi-Language LLM Evaluation Pipeline</a>
+      <ul class="versions">
+        <li class="version is-current is-latest">
+          <a href="../index.html">3</a>
+        </li>
+      </ul>
+    </li>
+  </ul>
+</div>
+    </div>
+  </aside>
+</div>
+<main class="article">
+<div class="toolbar" role="navigation">
+<button class="nav-toggle"></button>
+  <a href="../index.html" class="home-link"></a>
+<nav class="breadcrumbs" aria-label="breadcrumbs">
+  <ul>
+    <li><a href="../index.html">Automated Multi-Language LLM Evaluation Pipeline</a></li>
+    <li><a href="index.html">Model Deployment</a></li>
+    <li><a href="evaluation-pipeline.html">Evaluation Pipeline Deployment</a></li>
+  </ul>
+</nav>
+</div>
+  <div class="content">
+<aside class="toc sidebar" data-title="Contents" data-levels="2">
+  <div class="toc-menu"></div>
+</aside>
+<article class="doc">
+<h1 class="page">Evaluation Pipeline Deployment</h1>
+<div id="preamble">
+<div class="sectionbody">
+<div class="paragraph">
+<p>This guide covers the deployment and usage of the GuideLLM evaluation pipeline for comprehensive model assessment on OpenShift AI.</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_overview"><a class="anchor" href="#_overview"></a>Overview</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>The evaluation pipeline provides automated testing and benchmarking of deployed models. It consists of multiple integrated evaluation tasks:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p><strong>GuideLLM Benchmarking</strong>: Performance, throughput, and latency testing</p>
+</li>
+<li>
+<p><strong>LM-Eval Tasks</strong>: Accuracy evaluation using lm-eval-harness (MMLU, HumanEval, MBPP, etc.)</p>
+</li>
+<li>
+<p><strong>Custom Evaluation Tasks</strong>: Support for custom evaluation datasets</p>
+</li>
+<li>
+<p><strong>Model Registry Integration</strong>: Automatic registration of evaluation results</p>
+</li>
+<li>
+<p><strong>S3 Storage</strong>: Automated upload of results to object storage</p>
+</li>
+</ul>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_prerequisites"><a class="anchor" href="#_prerequisites"></a>Prerequisites</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>Before deploying the evaluation pipeline, ensure you have:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p><a href="infrastructure-setup.html" class="xref page">Infrastructure Setup</a> completed (MinIO, Model Registry)</p>
+</li>
+<li>
+<p><a href="modelcar-pipeline.html" class="xref page">ModelCar Pipeline</a> deployed</p>
+</li>
+<li>
+<p>A deployed model (InferenceService) to evaluate</p>
+</li>
+<li>
+<p>Pipeline namespace configured (e.g., <code>modelcar-pipelines</code>)</p>
+</li>
+</ul>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_pipeline_architecture"><a class="anchor" href="#_pipeline_architecture"></a>Pipeline Architecture</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>The evaluation pipeline orchestrates the following workflow:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-mermaid hljs" data-lang="mermaid">graph LR
+    A[Deploy Model] --&gt; B[GuideLLM Benchmark]
+    B --&gt; C[Upload GuideLLM Results]
+    C --&gt; D[LM-Eval Tasks]
+    D --&gt; E[Upload LM-Eval Results]
+    E --&gt; F[Register Results in Model Registry]</code></pre>
+</div>
+</div>
+<div class="olist arabic">
+<ol class="arabic">
+<li>
+<p><strong>Deploy Model</strong>: Deploys the model as a vLLM InferenceService (or uses existing deployment)</p>
+</li>
+<li>
+<p><strong>GuideLLM Benchmark</strong>: Runs performance benchmarking</p>
+</li>
+<li>
+<p><strong>Upload GuideLLM Results</strong>: Stores benchmark results in S3</p>
+</li>
+<li>
+<p><strong>LM-Eval Tasks</strong>: Runs accuracy evaluation tasks</p>
+</li>
+<li>
+<p><strong>Upload LM-Eval Results</strong>: Stores evaluation results in S3</p>
+</li>
+<li>
+<p><strong>Register Results</strong>: Updates model registry with evaluation metadata</p>
+</li>
+</ol>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_deploy_pipeline_components"><a class="anchor" href="#_deploy_pipeline_components"></a>Deploy Pipeline Components</h2>
+<div class="sectionbody">
+<div class="sect2">
+<h3 id="_create_pipeline_storage"><a class="anchor" href="#_create_pipeline_storage"></a>Create Pipeline Storage</h3>
+<div class="paragraph">
+<p>Create a PVC for storing evaluation results:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">oc apply -f deploy/guidellm-pipeline/pipeline/pvc.yaml -n modelcar-pipelines</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>This creates <code>guidellm-output-pvc</code> for workspace storage.</p>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_deploy_evaluation_tasks"><a class="anchor" href="#_deploy_evaluation_tasks"></a>Deploy Evaluation Tasks</h3>
+<div class="paragraph">
+<p>Deploy the individual Tekton tasks:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash"># Deploy model task
+oc apply -f deploy/guidellm-pipeline/pipeline/deploy-model-task.yaml -n modelcar-pipelines
+
+# GuideLLM benchmark task
+oc apply -f deploy/guidellm-pipeline/pipeline/guidellm-benchmark-task.yaml -n modelcar-pipelines
+
+# Upload GuideLLM results task
+oc apply -f deploy/guidellm-pipeline/pipeline/upload-guidellm-results-task.yaml -n modelcar-pipelines
+
+# LM-Eval task
+oc apply -f deploy/guidellm-pipeline/pipeline/lm-eval-task.yaml -n modelcar-pipelines
+
+# Upload LM-Eval results task
+oc apply -f deploy/guidellm-pipeline/pipeline/upload-lm-eval-results-task.yaml -n modelcar-pipelines
+
+# Model registry integration task
+oc apply -f deploy/guidellm-pipeline/pipeline/model-registry-task.yaml -n modelcar-pipelines</code></pre>
+</div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_create_evaluation_configmaps"><a class="anchor" href="#_create_evaluation_configmaps"></a>Create Evaluation ConfigMaps</h3>
+<div class="paragraph">
+<p>Create ConfigMaps for LM-Eval job definitions:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash"># MMLU evaluation job
+oc apply -f deploy/guidellm-pipeline/pipeline/mmlu.yaml -n modelcar-pipelines
+
+# Custom MMLU task (if using custom datasets)
+oc apply -f deploy/guidellm-pipeline/custom-lm-eval/custom-mmlu.yaml -n modelcar-pipelines
+oc apply -f deploy/guidellm-pipeline/custom-lm-eval/custom-task.yaml -n modelcar-pipelines
+oc apply -f deploy/guidellm-pipeline/custom-lm-eval/task.yaml -n modelcar-pipelines</code></pre>
+</div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_deploy_main_pipeline"><a class="anchor" href="#_deploy_main_pipeline"></a>Deploy Main Pipeline</h3>
+<div class="paragraph">
+<p>Deploy the main evaluation pipeline:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">oc apply -f deploy/guidellm-pipeline/pipeline/benchmark-eval-pipeline.yaml -n modelcar-pipelines</code></pre>
+</div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_verify_pipeline_deployment"><a class="anchor" href="#_verify_pipeline_deployment"></a>Verify Pipeline Deployment</h3>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash"># Check tasks
+oc get tasks -n modelcar-pipelines | grep -E "(guidellm|lm-eval|deploy-model|upload|model-registry)"
+
+# Check pipeline
+oc get pipeline guidellm-benchmark-pipeline -n modelcar-pipelines
+
+# Check ConfigMaps
+oc get configmap -n modelcar-pipelines | grep -E "(mmlu|custom)"</code></pre>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_running_the_evaluation_pipeline"><a class="anchor" href="#_running_the_evaluation_pipeline"></a>Running the Evaluation Pipeline</h2>
+<div class="sectionbody">
+<div class="sect2">
+<h3 id="_basic_evaluation_run"><a class="anchor" href="#_basic_evaluation_run"></a>Basic Evaluation Run</h3>
+<div class="paragraph">
+<p>To evaluate a deployed model:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">oc create -f - &lt;&lt;EOF
+apiVersion: tekton.dev/v1
+kind: PipelineRun
+metadata:
+  generateName: guidellm-benchmark-run-
+  namespace: modelcar-pipelines
+spec:
+  pipelineRef:
+    name: guidellm-benchmark-pipeline
+  params:
+    - name: target
+      value: "http://&lt;MODEL_SERVICE&gt;.&lt;NAMESPACE&gt;.svc.cluster.local:8080/v1"
+    - name: model-name
+      value: "granite-3.3-2b-instruct"
+    - name: processor
+      value: "ibm-granite/granite-3.3-2b-instruct"
+    - name: data-config
+      value: "prompt_tokens=800,output_tokens=128"
+    - name: max-seconds
+      value: "30"
+    - name: rate-type
+      value: "sweep"
+    - name: rate
+      value: "1.0, 4.0, 8.0, 16.0"
+    - name: api-key
+      value: ""
+    - name: max-concurrency
+      value: "10"
+    - name: huggingface-token
+      value: ""
+    - name: s3-api-endpoint
+      value: "http://minio-service.s3-storage.svc.cluster.local:9000"
+    - name: s3-access-key-id
+      value: "minio"
+    - name: s3-secret-access-key
+      value: "minio123"
+    - name: model-url
+      value: "quay.io/&lt;YOUR_ORG&gt;/granite-3.3-2b-instruct:latest"
+    - name: lm-eval-job-name
+      value: "mmlu-jurisprudence-eval-job"
+    - name: lm-eval-custom
+      value: "False"
+    - name: custom-data
+      value: "False"
+    - name: custom-filename
+      value: "no-file"
+    - name: model-reg-author
+      value: "ModelOps Team"
+    - name: valuesContent
+      value: |
+        deploymentMode: RawDeployment
+        fullnameOverride: "granite-2b"
+        model:
+          modelNameOverride: "granite-2b"
+          uri: "oci://quay.io/&lt;YOUR_ORG&gt;/granite-3.3-2b-instruct:latest"
+          args:
+            - "--disable-log-requests"
+            - "--max-num-seqs=32"
+  workspaces:
+    - name: shared-workspace
+      persistentVolumeClaim:
+        claimName: guidellm-output-pvc
+    - name: manifests
+      configMap:
+        name: mmlu-manifest
+    - name: custom-mmlu
+      configMap:
+        name: custom-mmlu
+  taskRunTemplate:
+    serviceAccountName: pipeline
+  timeouts:
+    pipeline: 1h0m0s
+EOF</code></pre>
+</div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_custom_evaluation_run"><a class="anchor" href="#_custom_evaluation_run"></a>Custom Evaluation Run</h3>
+<div class="paragraph">
+<p>To run custom evaluation tasks:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">oc create -f - &lt;&lt;EOF
+apiVersion: tekton.dev/v1
+kind: PipelineRun
+metadata:
+  generateName: custom-eval-run-
+  namespace: modelcar-pipelines
+spec:
+  pipelineRef:
+    name: guidellm-benchmark-pipeline
+  params:
+    - name: target
+      value: "http://&lt;MODEL_SERVICE&gt;.&lt;NAMESPACE&gt;.svc.cluster.local:8080/v1"
+    - name: model-name
+      value: "my-custom-model"
+    - name: processor
+      value: "org/model-repo"
+    - name: data-config
+      value: "prompt_tokens=1024,output_tokens=256"
+    - name: max-seconds
+      value: "60"
+    - name: rate-type
+      value: "fixed"
+    - name: rate
+      value: "10.0"
+    - name: lm-eval-custom
+      value: "True"
+    - name: custom-data
+      value: "True"
+    - name: custom-filename
+      value: "my-custom-eval.json"
+    # ... (other parameters as above)
+  workspaces:
+    - name: shared-workspace
+      persistentVolumeClaim:
+        claimName: guidellm-output-pvc
+    - name: manifests
+      configMap:
+        name: custom-eval-manifest
+    - name: custom-mmlu
+      configMap:
+        name: my-custom-mmlu
+  taskRunTemplate:
+    serviceAccountName: pipeline
+  timeouts:
+    pipeline: 2h0m0s
+EOF</code></pre>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_pipeline_parameters_reference"><a class="anchor" href="#_pipeline_parameters_reference"></a>Pipeline Parameters Reference</h2>
+<div class="sectionbody">
+<table class="tableblock frame-all grid-all stretch">
+<colgroup>
+<col style="width: 25%;">
+<col style="width: 50%;">
+<col style="width: 25%;">
+</colgroup>
+<thead>
+<tr>
+<th class="tableblock halign-left valign-top">Parameter</th>
+<th class="tableblock halign-left valign-top">Description</th>
+<th class="tableblock halign-left valign-top">Default</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>target</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Model endpoint URL (e.g., <code><a href="http://service.namespace.svc.cluster.local:8080/v1" class="bare">http://service.namespace.svc.cluster.local:8080/v1</a></code>)</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Required</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>model-name</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Model identifier for results</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Required</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>processor</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Hugging Face model path for tokenizer</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Required</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>data-config</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Token configuration (<code>prompt_tokens=N,output_tokens=M</code>)</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>prompt_tokens=800,output_tokens=128</code></p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>max-seconds</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Maximum benchmark duration in seconds</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>30</code></p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>rate-type</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Benchmark rate type (<code>sweep</code>, <code>fixed</code>)</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>sweep</code></p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>rate</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Request rate(s) for benchmarking</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>1.0, 4.0, 8.0, 16.0</code></p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>api-key</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">OpenAI API key if required</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">``</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>max-concurrency</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Maximum concurrent requests</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>10</code></p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>huggingface-token</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Hugging Face token for gated models</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">``</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>s3-api-endpoint</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">S3 endpoint URL</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code><a href="http://s3.openshift-storage.svc.cluster.local:80" class="bare">http://s3.openshift-storage.svc.cluster.local:80</a></code></p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>s3-access-key-id</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">S3 access key ID</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Required</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>s3-secret-access-key</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">S3 secret access key</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Required</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>model-url</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">ModelCar OCI image URL</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Required</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>lm-eval-job-name</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">LM-Eval job name to run</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Required</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>lm-eval-custom</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Whether to use custom evaluation (<code>True</code>/<code>False</code>)</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>False</code></p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>custom-data</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Whether custom data is provided (<code>True</code>/<code>False</code>)</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>False</code></p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>custom-filename</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Custom evaluation data filename</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>no-file</code></p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>model-reg-author</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Model registry author name</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Required</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>valuesContent</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Helm values for model deployment</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Required</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_building_custom_evaluation_containers"><a class="anchor" href="#_building_custom_evaluation_containers"></a>Building Custom Evaluation Containers</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>The evaluation pipeline uses custom containers that can be built and customized:</p>
+</div>
+<div class="sect2">
+<h3 id="_guidellm_evaluation_container"><a class="anchor" href="#_guidellm_evaluation_container"></a>GuideLLM Evaluation Container</h3>
+<div class="paragraph">
+<p>Location: <code>deploy/tasks/evaluate/</code></p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">cd deploy/tasks/evaluate
+chmod +x build-guidellm-container.sh
+
+# Build with defaults
+./build-guidellm-container.sh
+
+# Or build manually
+podman build --platform linux/amd64 \
+  -t quay.io/&lt;YOUR_ORG&gt;/guidellm-ubi:latest \
+  -f Containerfile .
+podman push quay.io/&lt;YOUR_ORG&gt;/guidellm-ubi:latest</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Update the task YAML to reference your custom image:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-yaml hljs" data-lang="yaml"># In guidellm-benchmark-task.yaml
+steps:
+  - name: guidellm-evaluate
+    image: quay.io/&lt;YOUR_ORG&gt;/guidellm-ubi:latest</code></pre>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_monitoring_evaluation_runs"><a class="anchor" href="#_monitoring_evaluation_runs"></a>Monitoring Evaluation Runs</h2>
+<div class="sectionbody">
+<div class="sect2">
+<h3 id="_view_pipeline_status"><a class="anchor" href="#_view_pipeline_status"></a>View Pipeline Status</h3>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash"># List evaluation pipeline runs
+oc get pipelinerun -l tekton.dev/pipeline=guidellm-benchmark-pipeline \
+  -n modelcar-pipelines
+
+# Watch specific run
+oc get pipelinerun &lt;PIPELINERUN_NAME&gt; -n modelcar-pipelines -w
+
+# Describe for details
+oc describe pipelinerun &lt;PIPELINERUN_NAME&gt; -n modelcar-pipelines</code></pre>
+</div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_view_task_logs"><a class="anchor" href="#_view_task_logs"></a>View Task Logs</h3>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash"># GuideLLM benchmark logs
+oc logs -l tekton.dev/pipelineRun=&lt;PIPELINERUN_NAME&gt; \
+  -l tekton.dev/pipelineTask=benchmark \
+  -n modelcar-pipelines -f
+
+# LM-Eval task logs
+oc logs -l tekton.dev/pipelineRun=&lt;PIPELINERUN_NAME&gt; \
+  -l tekton.dev/pipelineTask=lm-eval \
+  -n modelcar-pipelines -f
+
+# Model registry task logs
+oc logs -l tekton.dev/pipelineRun=&lt;PIPELINERUN_NAME&gt; \
+  -l tekton.dev/pipelineTask=register-model-and-results \
+  -n modelcar-pipelines -f</code></pre>
+</div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_view_results_in_s3"><a class="anchor" href="#_view_results_in_s3"></a>View Results in S3</h3>
+<div class="paragraph">
+<p>Access evaluation results in MinIO:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash"># Get MinIO route
+oc get route minio-api -n s3-storage
+
+# Log in to MinIO console with credentials
+# Navigate to buckets:
+# - guidellm-results/ - GuideLLM benchmark results
+# - lm-eval-results/ - LM-Eval task results</code></pre>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_understanding_evaluation_results"><a class="anchor" href="#_understanding_evaluation_results"></a>Understanding Evaluation Results</h2>
+<div class="sectionbody">
+<div class="sect2">
+<h3 id="_guidellm_results"><a class="anchor" href="#_guidellm_results"></a>GuideLLM Results</h3>
+<div class="paragraph">
+<p>GuideLLM produces JSON files with performance metrics:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-json hljs" data-lang="json">{
+  "model": "granite-3.3-2b-instruct",
+  "metrics": {
+    "throughput": {
+      "requests_per_second": 15.2,
+      "tokens_per_second": 1248.5
+    },
+    "latency": {
+      "mean_ms": 125.3,
+      "p50_ms": 110.2,
+      "p95_ms": 180.5,
+      "p99_ms": 250.1
+    },
+    "quality": {
+      "time_to_first_token_ms": 45.2,
+      "inter_token_latency_ms": 8.5
+    }
+  }
+}</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Key metrics:
+* <strong>Throughput</strong>: Requests and tokens per second
+* <strong>Latency</strong>: Response time percentiles
+* <strong>Quality</strong>: Time to first token, inter-token latency</p>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_lm_eval_results"><a class="anchor" href="#_lm_eval_results"></a>LM-Eval Results</h3>
+<div class="paragraph">
+<p>LM-Eval produces accuracy scores for various tasks:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-json hljs" data-lang="json">{
+  "results": {
+    "mmlu": {
+      "acc": 0.652,
+      "acc_stderr": 0.012
+    },
+    "humaneval": {
+      "pass@1": 0.347
+    },
+    "mbpp": {
+      "pass@1": 0.412
+    }
+  },
+  "config": {
+    "model": "granite-3.3-2b-instruct",
+    "tasks": ["mmlu", "humaneval", "mbpp"]
+  }
+}</code></pre>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_creating_custom_evaluation_tasks"><a class="anchor" href="#_creating_custom_evaluation_tasks"></a>Creating Custom Evaluation Tasks</h2>
+<div class="sectionbody">
+<div class="sect2">
+<h3 id="_custom_lm_eval_task"><a class="anchor" href="#_custom_lm_eval_task"></a>Custom LM-Eval Task</h3>
+<div class="paragraph">
+<p>Create a ConfigMap with custom evaluation job:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-yaml hljs" data-lang="yaml">apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: my-custom-eval-manifest
+  namespace: modelcar-pipelines
+data:
+  eval-job.yaml: |
+    apiVersion: batch/v1
+    kind: Job
+    metadata:
+      name: my-custom-eval-job
+    spec:
+      template:
+        spec:
+          containers:
+          - name: lm-eval
+            image: ghcr.io/eleutherai/lm-evaluation-harness:latest
+            args:
+              - "--model"
+              - "vllm"
+              - "--model_args"
+              - "served_url=http://MODEL_SERVICE:8080/v1,model=MODEL_NAME"
+              - "--tasks"
+              - "my_custom_task"
+              - "--output_path"
+              - "/results/custom-eval-results.json"
+            volumeMounts:
+            - name: results
+              mountPath: /results
+          volumes:
+          - name: results
+            persistentVolumeClaim:
+              claimName: guidellm-output-pvc
+          restartPolicy: Never</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Apply the ConfigMap:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">oc apply -f my-custom-eval-manifest.yaml</code></pre>
+</div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_custom_dataset"><a class="anchor" href="#_custom_dataset"></a>Custom Dataset</h3>
+<div class="paragraph">
+<p>Create a ConfigMap with custom evaluation data:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-yaml hljs" data-lang="yaml">apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: my-custom-dataset
+  namespace: modelcar-pipelines
+data:
+  custom-data.json: |
+    [
+      {
+        "input": "What is the capital of France?",
+        "expected_output": "Paris"
+      },
+      {
+        "input": "Explain quantum computing.",
+        "expected_output": "Quantum computing uses quantum mechanics..."
+      }
+    ]</code></pre>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_troubleshooting"><a class="anchor" href="#_troubleshooting"></a>Troubleshooting</h2>
+<div class="sectionbody">
+<div class="sect2">
+<h3 id="_model_endpoint_not_accessible"><a class="anchor" href="#_model_endpoint_not_accessible"></a>Model Endpoint Not Accessible</h3>
+<div class="paragraph">
+<p>Verify the InferenceService is running:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash"># Check InferenceService
+oc get inferenceservice -n &lt;MODEL_NAMESPACE&gt;
+
+# Check predictor pod
+oc get pods -l serving.kserve.io/inferenceservice=&lt;MODEL_NAME&gt; \
+  -n &lt;MODEL_NAMESPACE&gt;
+
+# Test endpoint
+oc run curl-test --rm -it --image=curlimages/curl -- \
+  curl http://&lt;MODEL_SERVICE&gt;.&lt;NAMESPACE&gt;.svc.cluster.local:8080/v1/models</code></pre>
+</div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_guidellm_benchmark_fails"><a class="anchor" href="#_guidellm_benchmark_fails"></a>GuideLLM Benchmark Fails</h3>
+<div class="paragraph">
+<p>Check GuideLLM task logs for errors:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash"># View detailed logs
+oc logs -l tekton.dev/pipelineTask=benchmark \
+  -l tekton.dev/pipelineRun=&lt;PIPELINERUN_NAME&gt; \
+  -n modelcar-pipelines
+
+# Common issues:
+# - Model endpoint unreachable
+# - Invalid data-config format
+# - Timeout too short for large models</code></pre>
+</div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_s3_upload_fails"><a class="anchor" href="#_s3_upload_fails"></a>S3 Upload Fails</h3>
+<div class="paragraph">
+<p>Verify MinIO credentials and connectivity:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash"># Check MinIO service
+oc get svc minio-service -n s3-storage
+
+# Test S3 access
+oc run aws-cli --rm -it --image=amazon/aws-cli -- \
+  s3 ls --endpoint-url http://minio-service.s3-storage.svc.cluster.local:9000 \
+  --no-verify-ssl</code></pre>
+</div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_lm_eval_job_fails"><a class="anchor" href="#_lm_eval_job_fails"></a>LM-Eval Job Fails</h3>
+<div class="paragraph">
+<p>Check the Job status and logs:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash"># List jobs
+oc get jobs -n modelcar-pipelines
+
+# Check job logs
+oc logs job/&lt;JOB_NAME&gt; -n modelcar-pipelines
+
+# Common issues:
+# - Missing Hugging Face token for gated models
+# - Insufficient memory for large models
+# - Invalid task configuration</code></pre>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_best_practices"><a class="anchor" href="#_best_practices"></a>Best Practices</h2>
+<div class="sectionbody">
+<div class="sect2">
+<h3 id="_resource_allocation"><a class="anchor" href="#_resource_allocation"></a>Resource Allocation</h3>
+<div class="ulist">
+<ul>
+<li>
+<p>Allocate sufficient memory for evaluation tasks (8Gi+ for larger models)</p>
+</li>
+<li>
+<p>Set appropriate timeouts based on model size and evaluation complexity</p>
+</li>
+<li>
+<p>Use node selectors for GPU-enabled nodes if evaluating large models</p>
+</li>
+</ul>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_result_management"><a class="anchor" href="#_result_management"></a>Result Management</h3>
+<div class="ulist">
+<ul>
+<li>
+<p>Regularly clean up old evaluation results from S3</p>
+</li>
+<li>
+<p>Use versioning in model registry to track evaluation history</p>
+</li>
+<li>
+<p>Archive important evaluation runs for compliance</p>
+</li>
+</ul>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_performance_optimization"><a class="anchor" href="#_performance_optimization"></a>Performance Optimization</h3>
+<div class="ulist">
+<ul>
+<li>
+<p>Run multiple evaluation tasks in parallel when possible</p>
+</li>
+<li>
+<p>Use shorter evaluation runs during development</p>
+</li>
+<li>
+<p>Run comprehensive evaluations during production releases</p>
+</li>
+</ul>
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_next_steps"><a class="anchor" href="#_next_steps"></a>Next Steps</h2>
+<div class="sectionbody">
+<div class="ulist">
+<ul>
+<li>
+<p>Integrate evaluation pipeline with CI/CD workflows</p>
+</li>
+<li>
+<p>Create custom evaluation tasks for domain-specific testing</p>
+</li>
+<li>
+<p>Set up automated alerts based on evaluation metrics</p>
+</li>
+<li>
+<p>Build dashboards for evaluation result visualization</p>
+</li>
+</ul>
+</div>
+</div>
+</div>
+<nav class="pagination">
+  <span class="prev"><a href="modelcar-pipeline.html">ModelCar Pipeline Deployment</a></span>
+</nav>
+</article>
+  </div>
+</main>
+</div>
+<footer class="footer">
+  <img src="../../../_/img/rhl-logo-red.png" height="40px" alt="Red Hat"  href="https://redhat.com" >
+</footer><script id="site-script" src="../../../_/js/site.js" data-ui-root-path="../../../_"></script>
+<script async src="../../../_/js/vendor/highlight.js"></script>
+  </body>
+</html>

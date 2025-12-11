@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>Deployment Overview :: Automated Multi Language LLM Evaluation Pipeline</title>
+    <link rel="prev" href="index.html">
+    <link rel="next" href="infrastructure-setup.html">
+    <meta name="generator" content="Antora 3.1.3">
+    <link rel="stylesheet" href="../../../_/css/site.css">
+    <script>var uiRootPath = '../../../_'</script>
+  </head>
+  <body class="article">
+<header class="header">
+  <nav class="navbar">
+    <div class="navbar-brand">
+      <a class="navbar-item" href="https://www.redhat.com" target="_blank"><img src="../../../_/img/redhat-logo.png" height="40px" alt="Red Hat"></a>
+      <a class="navbar-item" style="font-size: 24px; color: white" href="../../..">Automated Multi Language LLM Evaluation Pipeline</a>
+      <button class="navbar-burger" data-target="topbar-nav">
+        <span></span>
+        <span></span>
+        <span></span>
+      </button>
+    </div>
+    <div id="topbar-nav" class="navbar-menu">
+      <div class="navbar-end">
+        <a class="navbar-item" href="https://github.com/RedHatQuickCourses/changeme/issues" target="_blank">Report Issues</a>
+      </div>
+    </div>
+  </nav>
+</header><div class="body">
+<div class="nav-container" data-component="genai-amep" data-version="3">
+  <aside class="nav">
+    <div class="panels">
+<div class="nav-panel-menu is-active" data-panel="menu">
+  <nav class="nav-menu">
+    <h3 class="title"><a href="../index.html">Automated Multi-Language LLM Evaluation Pipeline</a></h3>
+<ul class="nav-list">
+  <li class="nav-item" data-depth="0">
+<ul class="nav-list">
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../index.html">Introduction</a>
+  </li>
+</ul>
+  </li>
+  <li class="nav-item" data-depth="0">
+<ul class="nav-list">
+  <li class="nav-item" data-depth="1">
+    <button class="nav-item-toggle"></button>
+    <a class="nav-link" href="../chapter1/index.html">Model Preparation</a>
+<ul class="nav-list">
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../chapter1/architecture.html">Downloading Models from HuggingFace</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../chapter1/multilang-evaluation.html">Model Compression</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <span class="nav-text">xref:section1.adoc</span>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <span class="nav-text">xref:section2.adoc</span>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <span class="nav-text">xref:section3.adoc</span>
+  </li>
+</ul>
+  </li>
+</ul>
+  </li>
+  <li class="nav-item" data-depth="0">
+<ul class="nav-list">
+  <li class="nav-item" data-depth="1">
+    <button class="nav-item-toggle"></button>
+    <a class="nav-link" href="index.html">Model Deployment</a>
+<ul class="nav-list">
+  <li class="nav-item is-current-page" data-depth="2">
+    <a class="nav-link" href="deployment-overview.html">Deployment Overview</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="infrastructure-setup.html">Infrastructure Setup</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="modelcar-pipeline.html">ModelCar Pipeline Deployment</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="evaluation-pipeline.html">Evaluation Pipeline Deployment</a>
+  </li>
+</ul>
+  </li>
+</ul>
+  </li>
+</ul>
+  </nav>
+</div>
+<div class="nav-panel-explore" data-panel="explore">
+  <div class="context">
+    <span class="title">Automated Multi-Language LLM Evaluation Pipeline</span>
+    <span class="version">3</span>
+  </div>
+  <ul class="components">
+    <li class="component is-current">
+      <a class="title" href="../index.html">Automated Multi-Language LLM Evaluation Pipeline</a>
+      <ul class="versions">
+        <li class="version is-current is-latest">
+          <a href="../index.html">3</a>
+        </li>
+      </ul>
+    </li>
+  </ul>
+</div>
+    </div>
+  </aside>
+</div>
+<main class="article">
+<div class="toolbar" role="navigation">
+<button class="nav-toggle"></button>
+  <a href="../index.html" class="home-link"></a>
+<nav class="breadcrumbs" aria-label="breadcrumbs">
+  <ul>
+    <li><a href="../index.html">Automated Multi-Language LLM Evaluation Pipeline</a></li>
+    <li><a href="index.html">Model Deployment</a></li>
+    <li><a href="deployment-overview.html">Deployment Overview</a></li>
+  </ul>
+</nav>
+</div>
+  <div class="content">
+<aside class="toc sidebar" data-title="Contents" data-levels="2">
+  <div class="toc-menu"></div>
+</aside>
+<article class="doc">
+<h1 class="page">Deployment Overview</h1>
+<div id="preamble">
+<div class="sectionbody">
+<div class="paragraph">
+<p>This section provides an overview of the GenAI AMEP deployment architecture on OpenShift AI, covering the complete workflow from model packaging to evaluation.</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_architecture_components"><a class="anchor" href="#_architecture_components"></a>Architecture Components</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>The GenAI AMEP deployment consists of several integrated components:</p>
+</div>
+<div class="sect2">
+<h3 id="_core_infrastructure"><a class="anchor" href="#_core_infrastructure"></a>Core Infrastructure</h3>
+<div class="ulist">
+<ul>
+<li>
+<p><strong>Quay Registry</strong>: Enterprise container registry for storing ModelCar OCI images</p>
+</li>
+<li>
+<p><strong>Model Registry</strong>: MySQL-backed registry for tracking model metadata and versions</p>
+</li>
+<li>
+<p><strong>MinIO Object Storage</strong>: S3-compatible storage for evaluation results and artifacts</p>
+</li>
+<li>
+<p><strong>Tekton Pipelines</strong>: Kubernetes-native CI/CD for automating workflows</p>
+</li>
+</ul>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_pipeline_components"><a class="anchor" href="#_pipeline_components"></a>Pipeline Components</h3>
+<div class="sect3">
+<h4 id="_modelcar_pipeline"><a class="anchor" href="#_modelcar_pipeline"></a>ModelCar Pipeline</h4>
+<div class="paragraph">
+<p>The ModelCar pipeline automates the process of packaging AI models as OCI (Open Container Initiative) images:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p><strong>Hugging Face Model Download</strong>: Pulls models from Hugging Face Hub</p>
+</li>
+<li>
+<p><strong>Model Compression</strong> (Optional): Compresses models using llmcompressor</p>
+</li>
+<li>
+<p><strong>ModelCar Building</strong>: Packages models into OCI images using OLOT</p>
+</li>
+<li>
+<p><strong>Registry Integration</strong>: Pushes images to Quay and registers in Model Registry</p>
+</li>
+<li>
+<p><strong>Model Deployment</strong> (Optional): Deploys as vLLM InferenceService</p>
+</li>
+<li>
+<p><strong>Model Evaluation</strong> (Optional): Runs evaluation tasks</p>
+</li>
+</ul>
+</div>
+</div>
+<div class="sect3">
+<h4 id="_evaluation_pipeline"><a class="anchor" href="#_evaluation_pipeline"></a>Evaluation Pipeline</h4>
+<div class="paragraph">
+<p>The evaluation pipeline provides comprehensive model assessment:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p><strong>GuideLLM Benchmarking</strong>: Performance and throughput testing</p>
+</li>
+<li>
+<p><strong>LM-Eval Tasks</strong>: Accuracy evaluation (MMLU, HumanEval, MBPP, etc.)</p>
+</li>
+<li>
+<p><strong>Multi-language Evaluation</strong>: Cross-language testing capabilities</p>
+</li>
+<li>
+<p><strong>TrustyAI Integration</strong>: Bias and fairness assessment</p>
+</li>
+<li>
+<p><strong>Results Storage</strong>: Automatic upload to S3-compatible storage</p>
+</li>
+</ul>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_deployment_workflow"><a class="anchor" href="#_deployment_workflow"></a>Deployment Workflow</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>The typical deployment workflow follows these steps:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-mermaid hljs" data-lang="mermaid">graph LR
+    A[Download Model] --&gt; B[Optional: Compress]
+    B --&gt; C[Build ModelCar]
+    C --&gt; D[Push to Quay]
+    D --&gt; E[Register in Model Registry]
+    E --&gt; F[Optional: Deploy]
+    F --&gt; G[Optional: Evaluate]
+    G --&gt; H[Store Results]</code></pre>
+</div>
+</div>
+<div class="olist arabic">
+<ol class="arabic">
+<li>
+<p><strong>Infrastructure Setup</strong>: Deploy Quay, Model Registry, and MinIO</p>
+</li>
+<li>
+<p><strong>Pipeline Installation</strong>: Install Tekton tasks and pipelines</p>
+</li>
+<li>
+<p><strong>Model Packaging</strong>: Run ModelCar pipeline to package models</p>
+</li>
+<li>
+<p><strong>Model Deployment</strong>: Deploy models as InferenceServices</p>
+</li>
+<li>
+<p><strong>Model Evaluation</strong>: Run evaluation pipelines to assess performance</p>
+</li>
+<li>
+<p><strong>Results Analysis</strong>: Review evaluation results from S3 storage</p>
+</li>
+</ol>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_key_features"><a class="anchor" href="#_key_features"></a>Key Features</h2>
+<div class="sectionbody">
+<div class="sect2">
+<h3 id="_modelcar_pipeline_features"><a class="anchor" href="#_modelcar_pipeline_features"></a>ModelCar Pipeline Features</h3>
+<div class="ulist">
+<ul>
+<li>
+<p>Automated download from Hugging Face Hub</p>
+</li>
+<li>
+<p>Support for gated models with authentication</p>
+</li>
+<li>
+<p>Optional model compression for reduced size</p>
+</li>
+<li>
+<p>OCI image packaging using OLOT</p>
+</li>
+<li>
+<p>Automatic model registry integration</p>
+</li>
+<li>
+<p>Configurable task skipping for flexibility</p>
+</li>
+<li>
+<p>Support for vLLM deployment</p>
+</li>
+<li>
+<p>Integrated evaluation capabilities</p>
+</li>
+</ul>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_evaluation_pipeline_features"><a class="anchor" href="#_evaluation_pipeline_features"></a>Evaluation Pipeline Features</h3>
+<div class="ulist">
+<ul>
+<li>
+<p>Performance benchmarking with GuideLLM</p>
+</li>
+<li>
+<p>Accuracy evaluation with lm-eval-harness</p>
+</li>
+<li>
+<p>Custom evaluation task support</p>
+</li>
+<li>
+<p>Multi-language evaluation</p>
+</li>
+<li>
+<p>Bias and fairness testing with TrustyAI</p>
+</li>
+<li>
+<p>Automated results storage</p>
+</li>
+<li>
+<p>Model registry integration</p>
+</li>
+</ul>
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_prerequisites"><a class="anchor" href="#_prerequisites"></a>Prerequisites</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>Before deploying the GenAI AMEP components on OpenShift AI, ensure you have:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p>OpenShift AI or OpenShift cluster with admin access</p>
+</li>
+<li>
+<p>OpenShift Pipelines (Tekton) operator installed</p>
+</li>
+<li>
+<p>Sufficient storage for model files and evaluation results</p>
+</li>
+<li>
+<p>Access to Quay.io or internal registry for container images</p>
+</li>
+<li>
+<p>Hugging Face token (for gated models)</p>
+</li>
+</ul>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_next_steps"><a class="anchor" href="#_next_steps"></a>Next Steps</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>Follow the deployment guides in this chapter:</p>
+</div>
+<div class="olist arabic">
+<ol class="arabic">
+<li>
+<p><a href="infrastructure-setup.html" class="xref page">Infrastructure Setup</a> - Deploy Quay, Model Registry, and MinIO</p>
+</li>
+<li>
+<p><a href="modelcar-pipeline.html" class="xref page">ModelCar Pipeline Deployment</a> - Set up model packaging automation</p>
+</li>
+<li>
+<p><a href="evaluation-pipeline.html" class="xref page">Evaluation Pipeline Deployment</a> - Deploy model evaluation workflows</p>
+</li>
+</ol>
+</div>
+</div>
+</div>
+<nav class="pagination">
+  <span class="prev"><a href="index.html">Model Deployment</a></span>
+  <span class="next"><a href="infrastructure-setup.html">Infrastructure Setup</a></span>
+</nav>
+</article>
+  </div>
+</main>
+</div>
+<footer class="footer">
+  <img src="../../../_/img/rhl-logo-red.png" height="40px" alt="Red Hat"  href="https://redhat.com" >
+</footer><script id="site-script" src="../../../_/js/site.js" data-ui-root-path="../../../_"></script>
+<script async src="../../../_/js/vendor/highlight.js"></script>
+  </body>
+</html>

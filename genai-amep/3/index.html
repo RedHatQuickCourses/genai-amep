@@ -54,6 +54,37 @@
   <li class="nav-item" data-depth="2">
     <a class="nav-link" href="chapter1/multilang-evaluation.html">Model Compression</a>
   </li>
+  <li class="nav-item" data-depth="2">
+    <span class="nav-text">xref:section1.adoc</span>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <span class="nav-text">xref:section2.adoc</span>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <span class="nav-text">xref:section3.adoc</span>
+  </li>
+</ul>
+  </li>
+</ul>
+  </li>
+  <li class="nav-item" data-depth="0">
+<ul class="nav-list">
+  <li class="nav-item" data-depth="1">
+    <button class="nav-item-toggle"></button>
+    <a class="nav-link" href="chapter2/index.html">Model Deployment</a>
+<ul class="nav-list">
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="chapter2/deployment-overview.html">Deployment Overview</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="chapter2/infrastructure-setup.html">Infrastructure Setup</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="chapter2/modelcar-pipeline.html">ModelCar Pipeline Deployment</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="chapter2/evaluation-pipeline.html">Evaluation Pipeline Deployment</a>
+  </li>
 </ul>
   </li>
 </ul>
@@ -104,12 +135,12 @@
 <p>This guide documents an automated pipeline for evaluating Large Language Models (LLMs) across multiple languages using Red Hat OpenShift AI as the platform.</p>
 </div>
 <div class="paragraph">
-<p><strong>Developed by</strong>: Red Hat AI Customer Adoption and Innovation team (CAI)</p>
+<p><strong>Original solution developed by</strong>: Red Hat AI Customer Adoption and Innovation team (CAI) and can be found here:  <a href="https://github.com/rh-aiservices-bu/model-car-importer.git" target="blank">model-car-importer repository</a></p>
 </div>
 </div>
 </div>
 <div class="sect1">
-<h2 id="_what_this_pipeline_does"><a class="anchor" href="#_what_this_pipeline_does"></a>What This Pipeline Does</h2>
+<h2 id="_what_this_step_by_step_pipeline_does"><a class="anchor" href="#_what_this_step_by_step_pipeline_does"></a>What This Step=-by-Step Pipeline Does</h2>
 <div class="sectionbody">
 <div class="paragraph">
 <p>This automated solution provides end-to-end capabilities for:</p>
@@ -118,9 +149,6 @@
 <ol class="arabic">
 <li>
 <p><strong>Model Acquisition</strong>: Download models from HuggingFace Hub</p>
-</li>
-<li>
-<p><strong>Model Optimization</strong>: Optional compression using llmcompressor</p>
 </li>
 <li>
 <p><strong>Container Packaging</strong>: Package models in Modelcar OCI containers</p>
