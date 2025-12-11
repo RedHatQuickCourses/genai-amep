@@ -1,0 +1,661 @@
+= Evaluation Pipeline Deployment
+
+This guide covers the deployment and usage of the GuideLLM evaluation pipeline for comprehensive model assessment on OpenShift AI.
+
+== Overview
+
+The evaluation pipeline provides automated testing and benchmarking of deployed models. It consists of multiple integrated evaluation tasks:
+
+* *GuideLLM Benchmarking*: Performance, throughput, and latency testing
+* *LM-Eval Tasks*: Accuracy evaluation using lm-eval-harness (MMLU, HumanEval, MBPP, etc.)
+* *Custom Evaluation Tasks*: Support for custom evaluation datasets
+* *Model Registry Integration*: Automatic registration of evaluation results
+* *S3 Storage*: Automated upload of results to object storage
+
+== Prerequisites
+
+Before deploying the evaluation pipeline, ensure you have:
+
+* xref:infrastructure-setup.adoc[Infrastructure Setup] completed (MinIO, Model Registry)
+* xref:modelcar-pipeline.adoc[ModelCar Pipeline] deployed
+* A deployed model (InferenceService) to evaluate
+* Pipeline namespace configured (e.g., `modelcar-pipelines`)
+
+== Pipeline Architecture
+
+The evaluation pipeline orchestrates the following workflow:
+
+[source,mermaid]
+----
+graph LR
+    A[Deploy Model] --> B[GuideLLM Benchmark]
+    B --> C[Upload GuideLLM Results]
+    C --> D[LM-Eval Tasks]
+    D --> E[Upload LM-Eval Results]
+    E --> F[Register Results in Model Registry]
+----
+
+. *Deploy Model*: Deploys the model as a vLLM InferenceService (or uses existing deployment)
+. *GuideLLM Benchmark*: Runs performance benchmarking
+. *Upload GuideLLM Results*: Stores benchmark results in S3
+. *LM-Eval Tasks*: Runs accuracy evaluation tasks
+. *Upload LM-Eval Results*: Stores evaluation results in S3
+. *Register Results*: Updates model registry with evaluation metadata
+
+== Deploy Pipeline Components
+
+=== Create Pipeline Storage
+
+Create a PVC for storing evaluation results:
+
+[source,bash]
+----
+oc apply -f deploy/guidellm-pipeline/pipeline/pvc.yaml -n modelcar-pipelines
+----
+
+This creates `guidellm-output-pvc` for workspace storage.
+
+=== Deploy Evaluation Tasks
+
+Deploy the individual Tekton tasks:
+
+[source,bash]
+----
+# Deploy model task
+oc apply -f deploy/guidellm-pipeline/pipeline/deploy-model-task.yaml -n modelcar-pipelines
+
+# GuideLLM benchmark task
+oc apply -f deploy/guidellm-pipeline/pipeline/guidellm-benchmark-task.yaml -n modelcar-pipelines
+
+# Upload GuideLLM results task
+oc apply -f deploy/guidellm-pipeline/pipeline/upload-guidellm-results-task.yaml -n modelcar-pipelines
+
+# LM-Eval task
+oc apply -f deploy/guidellm-pipeline/pipeline/lm-eval-task.yaml -n modelcar-pipelines
+
+# Upload LM-Eval results task
+oc apply -f deploy/guidellm-pipeline/pipeline/upload-lm-eval-results-task.yaml -n modelcar-pipelines
+
+# Model registry integration task
+oc apply -f deploy/guidellm-pipeline/pipeline/model-registry-task.yaml -n modelcar-pipelines
+----
+
+=== Create Evaluation ConfigMaps
+
+Create ConfigMaps for LM-Eval job definitions:
+
+[source,bash]
+----
+# MMLU evaluation job
+oc apply -f deploy/guidellm-pipeline/pipeline/mmlu.yaml -n modelcar-pipelines
+
+# Custom MMLU task (if using custom datasets)
+oc apply -f deploy/guidellm-pipeline/custom-lm-eval/custom-mmlu.yaml -n modelcar-pipelines
+oc apply -f deploy/guidellm-pipeline/custom-lm-eval/custom-task.yaml -n modelcar-pipelines
+oc apply -f deploy/guidellm-pipeline/custom-lm-eval/task.yaml -n modelcar-pipelines
+----
+
+=== Deploy Main Pipeline
+
+Deploy the main evaluation pipeline:
+
+[source,bash]
+----
+oc apply -f deploy/guidellm-pipeline/pipeline/benchmark-eval-pipeline.yaml -n modelcar-pipelines
+----
+
+=== Verify Pipeline Deployment
+
+[source,bash]
+----
+# Check tasks
+oc get tasks -n modelcar-pipelines | grep -E "(guidellm|lm-eval|deploy-model|upload|model-registry)"
+
+# Check pipeline
+oc get pipeline guidellm-benchmark-pipeline -n modelcar-pipelines
+
+# Check ConfigMaps
+oc get configmap -n modelcar-pipelines | grep -E "(mmlu|custom)"
+----
+
+== Running the Evaluation Pipeline
+
+=== Basic Evaluation Run
+
+To evaluate a deployed model:
+
+[source,bash]
+----
+oc create -f - <<EOF
+apiVersion: tekton.dev/v1
+kind: PipelineRun
+metadata:
+  generateName: guidellm-benchmark-run-
+  namespace: modelcar-pipelines
+spec:
+  pipelineRef:
+    name: guidellm-benchmark-pipeline
+  params:
+    - name: target
+      value: "http://<MODEL_SERVICE>.<NAMESPACE>.svc.cluster.local:8080/v1"
+    - name: model-name
+      value: "granite-3.3-2b-instruct"
+    - name: processor
+      value: "ibm-granite/granite-3.3-2b-instruct"
+    - name: data-config
+      value: "prompt_tokens=800,output_tokens=128"
+    - name: max-seconds
+      value: "30"
+    - name: rate-type
+      value: "sweep"
+    - name: rate
+      value: "1.0, 4.0, 8.0, 16.0"
+    - name: api-key
+      value: ""
+    - name: max-concurrency
+      value: "10"
+    - name: huggingface-token
+      value: ""
+    - name: s3-api-endpoint
+      value: "http://minio-service.s3-storage.svc.cluster.local:9000"
+    - name: s3-access-key-id
+      value: "minio"
+    - name: s3-secret-access-key
+      value: "minio123"
+    - name: model-url
+      value: "quay.io/<YOUR_ORG>/granite-3.3-2b-instruct:latest"
+    - name: lm-eval-job-name
+      value: "mmlu-jurisprudence-eval-job"
+    - name: lm-eval-custom
+      value: "False"
+    - name: custom-data
+      value: "False"
+    - name: custom-filename
+      value: "no-file"
+    - name: model-reg-author
+      value: "ModelOps Team"
+    - name: valuesContent
+      value: |
+        deploymentMode: RawDeployment
+        fullnameOverride: "granite-2b"
+        model:
+          modelNameOverride: "granite-2b"
+          uri: "oci://quay.io/<YOUR_ORG>/granite-3.3-2b-instruct:latest"
+          args:
+            - "--disable-log-requests"
+            - "--max-num-seqs=32"
+  workspaces:
+    - name: shared-workspace
+      persistentVolumeClaim:
+        claimName: guidellm-output-pvc
+    - name: manifests
+      configMap:
+        name: mmlu-manifest
+    - name: custom-mmlu
+      configMap:
+        name: custom-mmlu
+  taskRunTemplate:
+    serviceAccountName: pipeline
+  timeouts:
+    pipeline: 1h0m0s
+EOF
+----
+
+=== Custom Evaluation Run
+
+To run custom evaluation tasks:
+
+[source,bash]
+----
+oc create -f - <<EOF
+apiVersion: tekton.dev/v1
+kind: PipelineRun
+metadata:
+  generateName: custom-eval-run-
+  namespace: modelcar-pipelines
+spec:
+  pipelineRef:
+    name: guidellm-benchmark-pipeline
+  params:
+    - name: target
+      value: "http://<MODEL_SERVICE>.<NAMESPACE>.svc.cluster.local:8080/v1"
+    - name: model-name
+      value: "my-custom-model"
+    - name: processor
+      value: "org/model-repo"
+    - name: data-config
+      value: "prompt_tokens=1024,output_tokens=256"
+    - name: max-seconds
+      value: "60"
+    - name: rate-type
+      value: "fixed"
+    - name: rate
+      value: "10.0"
+    - name: lm-eval-custom
+      value: "True"
+    - name: custom-data
+      value: "True"
+    - name: custom-filename
+      value: "my-custom-eval.json"
+    # ... (other parameters as above)
+  workspaces:
+    - name: shared-workspace
+      persistentVolumeClaim:
+        claimName: guidellm-output-pvc
+    - name: manifests
+      configMap:
+        name: custom-eval-manifest
+    - name: custom-mmlu
+      configMap:
+        name: my-custom-mmlu
+  taskRunTemplate:
+    serviceAccountName: pipeline
+  timeouts:
+    pipeline: 2h0m0s
+EOF
+----
+
+== Pipeline Parameters Reference
+
+[cols="1,2,1"]
+|===
+|Parameter |Description |Default
+
+|`target`
+|Model endpoint URL (e.g., `http://service.namespace.svc.cluster.local:8080/v1`)
+|Required
+
+|`model-name`
+|Model identifier for results
+|Required
+
+|`processor`
+|Hugging Face model path for tokenizer
+|Required
+
+|`data-config`
+|Token configuration (`prompt_tokens=N,output_tokens=M`)
+|`prompt_tokens=800,output_tokens=128`
+
+|`max-seconds`
+|Maximum benchmark duration in seconds
+|`30`
+
+|`rate-type`
+|Benchmark rate type (`sweep`, `fixed`)
+|`sweep`
+
+|`rate`
+|Request rate(s) for benchmarking
+|`1.0, 4.0, 8.0, 16.0`
+
+|`api-key`
+|OpenAI API key if required
+|``
+
+|`max-concurrency`
+|Maximum concurrent requests
+|`10`
+
+|`huggingface-token`
+|Hugging Face token for gated models
+|``
+
+|`s3-api-endpoint`
+|S3 endpoint URL
+|`http://s3.openshift-storage.svc.cluster.local:80`
+
+|`s3-access-key-id`
+|S3 access key ID
+|Required
+
+|`s3-secret-access-key`
+|S3 secret access key
+|Required
+
+|`model-url`
+|ModelCar OCI image URL
+|Required
+
+|`lm-eval-job-name`
+|LM-Eval job name to run
+|Required
+
+|`lm-eval-custom`
+|Whether to use custom evaluation (`True`/`False`)
+|`False`
+
+|`custom-data`
+|Whether custom data is provided (`True`/`False`)
+|`False`
+
+|`custom-filename`
+|Custom evaluation data filename
+|`no-file`
+
+|`model-reg-author`
+|Model registry author name
+|Required
+
+|`valuesContent`
+|Helm values for model deployment
+|Required
+|===
+
+== Building Custom Evaluation Containers
+
+The evaluation pipeline uses custom containers that can be built and customized:
+
+=== GuideLLM Evaluation Container
+
+Location: `deploy/tasks/evaluate/`
+
+[source,bash]
+----
+cd deploy/tasks/evaluate
+chmod +x build-guidellm-container.sh
+
+# Build with defaults
+./build-guidellm-container.sh
+
+# Or build manually
+podman build --platform linux/amd64 \
+  -t quay.io/<YOUR_ORG>/guidellm-ubi:latest \
+  -f Containerfile .
+podman push quay.io/<YOUR_ORG>/guidellm-ubi:latest
+----
+
+Update the task YAML to reference your custom image:
+
+[source,yaml]
+----
+# In guidellm-benchmark-task.yaml
+steps:
+  - name: guidellm-evaluate
+    image: quay.io/<YOUR_ORG>/guidellm-ubi:latest
+----
+
+== Monitoring Evaluation Runs
+
+=== View Pipeline Status
+
+[source,bash]
+----
+# List evaluation pipeline runs
+oc get pipelinerun -l tekton.dev/pipeline=guidellm-benchmark-pipeline \
+  -n modelcar-pipelines
+
+# Watch specific run
+oc get pipelinerun <PIPELINERUN_NAME> -n modelcar-pipelines -w
+
+# Describe for details
+oc describe pipelinerun <PIPELINERUN_NAME> -n modelcar-pipelines
+----
+
+=== View Task Logs
+
+[source,bash]
+----
+# GuideLLM benchmark logs
+oc logs -l tekton.dev/pipelineRun=<PIPELINERUN_NAME> \
+  -l tekton.dev/pipelineTask=benchmark \
+  -n modelcar-pipelines -f
+
+# LM-Eval task logs
+oc logs -l tekton.dev/pipelineRun=<PIPELINERUN_NAME> \
+  -l tekton.dev/pipelineTask=lm-eval \
+  -n modelcar-pipelines -f
+
+# Model registry task logs
+oc logs -l tekton.dev/pipelineRun=<PIPELINERUN_NAME> \
+  -l tekton.dev/pipelineTask=register-model-and-results \
+  -n modelcar-pipelines -f
+----
+
+=== View Results in S3
+
+Access evaluation results in MinIO:
+
+[source,bash]
+----
+# Get MinIO route
+oc get route minio-api -n s3-storage
+
+# Log in to MinIO console with credentials
+# Navigate to buckets:
+# - guidellm-results/ - GuideLLM benchmark results
+# - lm-eval-results/ - LM-Eval task results
+----
+
+== Understanding Evaluation Results
+
+=== GuideLLM Results
+
+GuideLLM produces JSON files with performance metrics:
+
+[source,json]
+----
+{
+  "model": "granite-3.3-2b-instruct",
+  "metrics": {
+    "throughput": {
+      "requests_per_second": 15.2,
+      "tokens_per_second": 1248.5
+    },
+    "latency": {
+      "mean_ms": 125.3,
+      "p50_ms": 110.2,
+      "p95_ms": 180.5,
+      "p99_ms": 250.1
+    },
+    "quality": {
+      "time_to_first_token_ms": 45.2,
+      "inter_token_latency_ms": 8.5
+    }
+  }
+}
+----
+
+Key metrics:
+* *Throughput*: Requests and tokens per second
+* *Latency*: Response time percentiles
+* *Quality*: Time to first token, inter-token latency
+
+=== LM-Eval Results
+
+LM-Eval produces accuracy scores for various tasks:
+
+[source,json]
+----
+{
+  "results": {
+    "mmlu": {
+      "acc": 0.652,
+      "acc_stderr": 0.012
+    },
+    "humaneval": {
+      "pass@1": 0.347
+    },
+    "mbpp": {
+      "pass@1": 0.412
+    }
+  },
+  "config": {
+    "model": "granite-3.3-2b-instruct",
+    "tasks": ["mmlu", "humaneval", "mbpp"]
+  }
+}
+----
+
+== Creating Custom Evaluation Tasks
+
+=== Custom LM-Eval Task
+
+Create a ConfigMap with custom evaluation job:
+
+[source,yaml]
+----
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: my-custom-eval-manifest
+  namespace: modelcar-pipelines
+data:
+  eval-job.yaml: |
+    apiVersion: batch/v1
+    kind: Job
+    metadata:
+      name: my-custom-eval-job
+    spec:
+      template:
+        spec:
+          containers:
+          - name: lm-eval
+            image: ghcr.io/eleutherai/lm-evaluation-harness:latest
+            args:
+              - "--model"
+              - "vllm"
+              - "--model_args"
+              - "served_url=http://MODEL_SERVICE:8080/v1,model=MODEL_NAME"
+              - "--tasks"
+              - "my_custom_task"
+              - "--output_path"
+              - "/results/custom-eval-results.json"
+            volumeMounts:
+            - name: results
+              mountPath: /results
+          volumes:
+          - name: results
+            persistentVolumeClaim:
+              claimName: guidellm-output-pvc
+          restartPolicy: Never
+----
+
+Apply the ConfigMap:
+
+[source,bash]
+----
+oc apply -f my-custom-eval-manifest.yaml
+----
+
+=== Custom Dataset
+
+Create a ConfigMap with custom evaluation data:
+
+[source,yaml]
+----
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: my-custom-dataset
+  namespace: modelcar-pipelines
+data:
+  custom-data.json: |
+    [
+      {
+        "input": "What is the capital of France?",
+        "expected_output": "Paris"
+      },
+      {
+        "input": "Explain quantum computing.",
+        "expected_output": "Quantum computing uses quantum mechanics..."
+      }
+    ]
+----
+
+== Troubleshooting
+
+=== Model Endpoint Not Accessible
+
+Verify the InferenceService is running:
+
+[source,bash]
+----
+# Check InferenceService
+oc get inferenceservice -n <MODEL_NAMESPACE>
+
+# Check predictor pod
+oc get pods -l serving.kserve.io/inferenceservice=<MODEL_NAME> \
+  -n <MODEL_NAMESPACE>
+
+# Test endpoint
+oc run curl-test --rm -it --image=curlimages/curl -- \
+  curl http://<MODEL_SERVICE>.<NAMESPACE>.svc.cluster.local:8080/v1/models
+----
+
+=== GuideLLM Benchmark Fails
+
+Check GuideLLM task logs for errors:
+
+[source,bash]
+----
+# View detailed logs
+oc logs -l tekton.dev/pipelineTask=benchmark \
+  -l tekton.dev/pipelineRun=<PIPELINERUN_NAME> \
+  -n modelcar-pipelines
+
+# Common issues:
+# - Model endpoint unreachable
+# - Invalid data-config format
+# - Timeout too short for large models
+----
+
+=== S3 Upload Fails
+
+Verify MinIO credentials and connectivity:
+
+[source,bash]
+----
+# Check MinIO service
+oc get svc minio-service -n s3-storage
+
+# Test S3 access
+oc run aws-cli --rm -it --image=amazon/aws-cli -- \
+  s3 ls --endpoint-url http://minio-service.s3-storage.svc.cluster.local:9000 \
+  --no-verify-ssl
+----
+
+=== LM-Eval Job Fails
+
+Check the Job status and logs:
+
+[source,bash]
+----
+# List jobs
+oc get jobs -n modelcar-pipelines
+
+# Check job logs
+oc logs job/<JOB_NAME> -n modelcar-pipelines
+
+# Common issues:
+# - Missing Hugging Face token for gated models
+# - Insufficient memory for large models
+# - Invalid task configuration
+----
+
+== Best Practices
+
+=== Resource Allocation
+
+* Allocate sufficient memory for evaluation tasks (8Gi+ for larger models)
+* Set appropriate timeouts based on model size and evaluation complexity
+* Use node selectors for GPU-enabled nodes if evaluating large models
+
+=== Result Management
+
+* Regularly clean up old evaluation results from S3
+* Use versioning in model registry to track evaluation history
+* Archive important evaluation runs for compliance
+
+=== Performance Optimization
+
+* Run multiple evaluation tasks in parallel when possible
+* Use shorter evaluation runs during development
+* Run comprehensive evaluations during production releases
+
+== Next Steps
+
+* Integrate evaluation pipeline with CI/CD workflows
+* Create custom evaluation tasks for domain-specific testing
+* Set up automated alerts based on evaluation metrics
+* Build dashboards for evaluation result visualization

@@ -1,3 +1,24 @@
-= Section 1
+= Quay Registry Options
 
-This is _Section 1_ of _Chapter 1_ in the *hello* quick course....
+== Deploy locally -
+
+
+
+== Use Red Hat Quay
+
+Log in to Quay.io
+Navigate to your organization or user account
+Click on "Robot Accounts" in the left sidebar menu
+Click "Create Robot Account" button
+Enter a name for the robot account (e.g. modelcar-pipeline)
+Click "Create Robot Account"
+On the next screen, click "Edit Repository Permissions"
+Search for and select your target repository
+Set permissions to "Write" access
+Click "Update Permission"
+Save the robot account credentials:
+Username will be in format: your-org+robot-name
+Password will be shown only once - copy it immediately
+Use these credentials in your .env file:
+QUAY_USERNAME="your-org+robot-name"
+QUAY_PASSWORD="robot-account-password" 

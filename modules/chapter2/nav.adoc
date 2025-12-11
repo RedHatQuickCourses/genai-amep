@@ -1,4 +1,5 @@
 * xref:index.adoc[Model Deployment]
-** xref:vllm-deployment.adoc[vLLM Deployment on OpenShift AI]
-** xref:inference-service.adoc[InferenceService Configuration]
-** xref:testing-deployment.adoc[Testing Your Deployment]
+** xref:deployment-overview.adoc[Deployment Overview]
+** xref:infrastructure-setup.adoc[Infrastructure Setup]
+** xref:modelcar-pipeline.adoc[ModelCar Pipeline Deployment]
+** xref:evaluation-pipeline.adoc[Evaluation Pipeline Deployment]

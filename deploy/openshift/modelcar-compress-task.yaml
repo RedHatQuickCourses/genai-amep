@@ -1,0 +1,80 @@
+apiVersion: tekton.dev/v1beta1
+kind: Task
+metadata:
+  name: compress-model
+spec:
+  workspaces:
+    - name: shared-workspace
+  params:
+    - name: COMPRESS_MODEL
+      type: string
+      description: "Whether to compress the model using llmcompressor (true/false)"
+    - name: SKIP_TASK
+      type: string
+      description: "Name of this task"
+    - name: SKIP_TASKS
+      type: string
+      description: "Comma-separated list of tasks to skip"
+  stepTemplate:
+    resources:
+      limits:
+        nvidia.com/gpu: 4
+        memory: "128Gi"
+        cpu: 1
+      requests:
+        nvidia.com/gpu: 4
+        cpu: 1
+        memory: "64Gi"
+  steps:
+    - name: compress
+      image: registry.access.redhat.com/ubi9/python-311:latest
+      timeout: 20h
+      env:
+        - name: HUGGINGFACE_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: huggingface-secret
+              key: HUGGINGFACE_TOKEN
+              optional: true
+        - name: HF_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: huggingface-secret
+              key: HUGGINGFACE_TOKEN
+              optional: true
+        - name: PYTORCH_CUDA_ALLOC_CONF
+          value: "max_split_size_mb:512"
+        - name: CUDA_LAUNCH_BLOCKING
+          value: "1"
+      script: |
+        #!/bin/bash
+        set -e
+        if [[ ",$(params.SKIP_TASKS)," == *",$(params.SKIP_TASK),"* ]]; then
+          echo "Skipping compress-model task"
+          exit 0
+        fi
+        if [ "$(params.COMPRESS_MODEL)" = "true" ]; then
+          echo "Compressing model using llmcompressor..."
+          echo "Current directory: $(pwd)"
+          echo "Python version: $(python --version)"
+          echo "Listing model directory contents:"
+          ls -la /workspace/shared-workspace/model
+          
+          cd /workspace/shared-workspace/model
+          
+          pip install git+https://github.com/fynnsu/llm-compressor.git
+          
+          cp /workspace/compress.py .
+          python compress.py
+          echo "Model compression complete!"
+        else
+          echo "Skipping model compression..."
+        fi
+      volumeMounts:
+        - name: compress-script
+          mountPath: /workspace/compress.py
+          subPath: compress.py
+  volumes:
+    - name: compress-script
+      configMap:
+        name: compress-script 

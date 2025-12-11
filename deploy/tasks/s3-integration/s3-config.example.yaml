@@ -1,0 +1,51 @@
+# S3 Configuration for LLM Evaluation Results Storage
+# Copy this file to s3-config.yaml and fill in your credentials
+
+# IMPORTANT: Never commit s3-config.yaml to git!
+# Add it to .gitignore to keep your credentials safe
+
+# S3 Bucket Configuration
+s3:
+  # Bucket name for storing evaluation results
+  bucket_name: "llm-evaluation-results"
+
+  # S3 Endpoint URL
+  # For AWS S3: leave empty or set to https://s3.amazonaws.com
+  # For MinIO: http://minio.example.com:9000
+  # For other S3-compatible: your endpoint URL
+  endpoint_url: ""
+
+  # AWS Credentials
+  # You can also use environment variables:
+  # - AWS_ACCESS_KEY_ID
+  # - AWS_SECRET_ACCESS_KEY
+  credentials:
+    access_key_id: "YOUR_ACCESS_KEY_ID"
+    secret_access_key: "YOUR_SECRET_ACCESS_KEY"
+
+  # Region (optional, defaults to us-east-1)
+  region: "us-east-1"
+
+# OpenShift Secret Creation
+# To create a Kubernetes secret with these credentials:
+#
+# kubectl create secret generic s3-credentials \
+#   --from-literal=AWS_ACCESS_KEY_ID=your-access-key \
+#   --from-literal=AWS_SECRET_ACCESS_KEY=your-secret-key \
+#   --from-literal=S3_ENDPOINT_URL=your-endpoint-url \
+#   --from-literal=S3_BUCKET=llm-evaluation-results
+#
+# Or apply the manifest below:
+
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: s3-credentials
+  namespace: your-namespace
+type: Opaque
+stringData:
+  AWS_ACCESS_KEY_ID: "YOUR_ACCESS_KEY_ID"
+  AWS_SECRET_ACCESS_KEY: "YOUR_SECRET_ACCESS_KEY"
+  S3_ENDPOINT_URL: ""  # Leave empty for AWS S3
+  S3_BUCKET: "llm-evaluation-results"

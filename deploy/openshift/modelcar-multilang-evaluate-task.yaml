@@ -1,0 +1,315 @@
+apiVersion: tekton.dev/v1beta1
+kind: Task
+metadata:
+  name: multilang-evaluate-model
+  annotations:
+    description: "Evaluates LLM performance across multiple languages (English, Spanish, Japanese)"
+spec:
+  workspaces:
+    - name: shared-workspace
+  params:
+    - name: EVALUATE_MODEL
+      type: string
+      description: "Whether to evaluate the model (true/false)"
+      default: "false"
+    - name: SKIP_TASK
+      type: string
+      description: "Name of this task"
+    - name: SKIP_TASKS
+      type: string
+      description: "Comma-separated list of tasks to skip"
+    - name: MODEL_NAME
+      type: string
+      description: "Model name for evaluation"
+    - name: MODEL_VERSION
+      type: string
+      description: "Model version for evaluation"
+    - name: LANGUAGES
+      type: string
+      description: "Comma-separated list of languages to evaluate (en,es,ja)"
+      default: "en,es,ja"
+    - name: S3_ENABLED
+      type: string
+      description: "Whether to upload results to S3 (true/false)"
+      default: "false"
+  stepTemplate:
+    resources:
+      limits:
+        memory: "32Gi"
+        cpu: 4
+        nvidia.com/gpu: 1
+      requests:
+        cpu: 2
+        memory: "16Gi"
+        nvidia.com/gpu: 1
+  steps:
+    - name: multilang-evaluate
+      image: quay.io/opendatahub/llmcompressor-workbench:main
+      timeout: 3h
+      env:
+        - name: HF_ALLOW_CODE_EVAL
+          value: "1"
+        - name: TOKENIZERS_PARALLELISM
+          value: "false"
+        - name: HF_HOME
+          value: "/tmp/hf_cache"
+        - name: AWS_ACCESS_KEY_ID
+          valueFrom:
+            secretKeyRef:
+              name: s3-credentials
+              key: AWS_ACCESS_KEY_ID
+              optional: true
+        - name: AWS_SECRET_ACCESS_KEY
+          valueFrom:
+            secretKeyRef:
+              name: s3-credentials
+              key: AWS_SECRET_ACCESS_KEY
+              optional: true
+        - name: S3_ENDPOINT_URL
+          valueFrom:
+            secretKeyRef:
+              name: s3-credentials
+              key: S3_ENDPOINT_URL
+              optional: true
+        - name: S3_BUCKET
+          valueFrom:
+            secretKeyRef:
+              name: s3-credentials
+              key: S3_BUCKET
+              optional: true
+      script: |
+        #!/bin/bash
+        set -e
+
+        echo "🌍 Multi-Language LLM Evaluation Pipeline"
+        echo "Developed by the Red Hat AI Customer Adoption and Innovation team (CAI)"
+        echo "=========================================================================="
+
+        # Check if task should be skipped
+        if [[ ",$(params.SKIP_TASKS)," == *",$(params.SKIP_TASK),"* ]]; then
+          echo "⏭️  Skipping multilang-evaluate-model task"
+          exit 0
+        fi
+
+        if [ "$(params.EVALUATE_MODEL)" != "true" ]; then
+          echo "⏭️  Skipping model evaluation (EVALUATE_MODEL=false)"
+          exit 0
+        fi
+
+        # Setup
+        echo "📦 Installing evaluation dependencies..."
+        pip install "lm-eval[vllm]" --upgrade --quiet
+        pip install boto3 --quiet  # For S3 integration
+        python --version
+
+        # Find model directory
+        if [ -d "/workspace/shared-workspace/model" ]; then
+          LOCAL_MODEL_DIR="/workspace/shared-workspace/model"
+          echo "✅ Using model directory: $LOCAL_MODEL_DIR"
+        elif [ -d "/workspace/shared-workspace/model_original" ]; then
+          LOCAL_MODEL_DIR="/workspace/shared-workspace/model_original"
+          echo "✅ Using original model directory: $LOCAL_MODEL_DIR"
+        else
+          echo "❌ No local model directory found"
+          ls -la /workspace/shared-workspace/
+          exit 1
+        fi
+
+        # Create results directory
+        RESULTS_DIR="/workspace/shared-workspace/multilang_evaluation_results"
+        mkdir -p "$RESULTS_DIR"
+
+        # Parse languages parameter
+        IFS=',' read -ra LANGS <<< "$(params.LANGUAGES)"
+        echo "🌐 Languages to evaluate: ${LANGS[@]}"
+
+        # Evaluation timestamp
+        TIMESTAMP=$(date +%Y%m%d_%H%M%S)
+        EVAL_ID="$(params.MODEL_NAME)_$(params.MODEL_VERSION)_${TIMESTAMP}"
+
+        echo ""
+        echo "📊 Starting Multi-Language Evaluation"
+        echo "Model: $(params.MODEL_NAME) v$(params.MODEL_VERSION)"
+        echo "Evaluation ID: $EVAL_ID"
+        echo "=========================================================================="
+
+        # Language-specific benchmark mappings
+        declare -A LANGUAGE_TASKS
+        LANGUAGE_TASKS[en]="arc_easy,hellaswag,winogrande,truthfulqa_mc2"
+        LANGUAGE_TASKS[es]="belebele_spa_Latn,xnli_es"
+        LANGUAGE_TASKS[ja]="belebele_jpn_Jpan,xnli_ja"
+
+        # Evaluate each language
+        for LANG in "${LANGS[@]}"; do
+          echo ""
+          echo "🔍 Evaluating Language: $LANG"
+          echo "----------------------------------------"
+
+          TASKS="${LANGUAGE_TASKS[$LANG]}"
+
+          if [ -z "$TASKS" ]; then
+            echo "⚠️  No tasks configured for language: $LANG, skipping..."
+            continue
+          fi
+
+          echo "📋 Tasks: $TASKS"
+
+          LANG_RESULTS_DIR="$RESULTS_DIR/${LANG}"
+          mkdir -p "$LANG_RESULTS_DIR"
+
+          # Run evaluation
+          echo "⚙️  Running lm-eval..."
+          lm_eval --model vllm \
+            --model_args "pretrained=$LOCAL_MODEL_DIR,tensor_parallel_size=1,gpu_memory_utilization=0.9,max_model_len=8192" \
+            --tasks "$TASKS" \
+            --num_fewshot 5 \
+            --batch_size 8 \
+            --output_path "$LANG_RESULTS_DIR" \
+            --log_samples
+
+          if [ $? -eq 0 ]; then
+            echo "✅ Evaluation complete for $LANG"
+
+            # Create language-specific summary
+            cat > "$LANG_RESULTS_DIR/metadata.json" << EOF
+        {
+          "model_name": "$(params.MODEL_NAME)",
+          "model_version": "$(params.MODEL_VERSION)",
+          "language": "$LANG",
+          "tasks": "$TASKS",
+          "timestamp": "$TIMESTAMP",
+          "evaluation_id": "$EVAL_ID"
+        }
+        EOF
+          else
+            echo "❌ Evaluation failed for $LANG"
+          fi
+        done
+
+        echo ""
+        echo "=========================================================================="
+        echo "📊 EVALUATION SUMMARY"
+        echo "=========================================================================="
+
+        # Generate cross-language comparison
+        python3 << 'PYTHON_SCRIPT'
+        import json
+        import os
+        from pathlib import Path
+
+        results_dir = Path("/workspace/shared-workspace/multilang_evaluation_results")
+        summary = {
+            "model_name": os.environ.get("MODEL_NAME", "unknown"),
+            "model_version": os.environ.get("MODEL_VERSION", "unknown"),
+            "timestamp": os.environ.get("TIMESTAMP", "unknown"),
+            "languages": {}
+        }
+
+        print("\n🌍 Multi-Language Performance Comparison:\n")
+        print(f"{'Language':<12} {'Task':<30} {'Metric':<20} {'Score':<10}")
+        print("-" * 75)
+
+        for lang_dir in sorted(results_dir.iterdir()):
+            if lang_dir.is_dir():
+                lang = lang_dir.name
+                results_file = lang_dir / "results.json"
+
+                if results_file.exists():
+                    with open(results_file) as f:
+                        data = json.load(f)
+
+                    summary["languages"][lang] = {}
+
+                    for task, metrics in data.get("results", {}).items():
+                        if isinstance(metrics, dict):
+                            summary["languages"][lang][task] = {}
+                            for metric, value in metrics.items():
+                                if isinstance(value, (int, float)):
+                                    summary["languages"][lang][task][metric] = value
+                                    if metric.endswith(('acc', 'acc_norm', 'f1', 'em')):
+                                        print(f"{lang:<12} {task:<30} {metric:<20} {value:>8.4f}")
+
+        print("-" * 75)
+
+        # Save comprehensive summary
+        summary_file = results_dir / "cross_language_summary.json"
+        with open(summary_file, 'w') as f:
+            json.dump(summary, f, indent=2)
+
+        print(f"\n✅ Summary saved to: {summary_file}")
+
+        PYTHON_SCRIPT
+
+        echo ""
+        echo "💾 Results saved to: $RESULTS_DIR"
+
+        # S3 Upload (if enabled)
+        if [ "$(params.S3_ENABLED)" = "true" ]; then
+          echo ""
+          echo "☁️  Uploading results to S3..."
+
+          if [ -z "$AWS_ACCESS_KEY_ID" ] || [ -z "$AWS_SECRET_ACCESS_KEY" ]; then
+            echo "⚠️  S3 credentials not found. Skipping upload."
+            echo "   To enable S3 upload, create a secret named 's3-credentials' with keys:"
+            echo "   - AWS_ACCESS_KEY_ID"
+            echo "   - AWS_SECRET_ACCESS_KEY"
+            echo "   - S3_ENDPOINT_URL (optional)"
+            echo "   - S3_BUCKET"
+          else
+            python3 << 'S3_UPLOAD'
+        import os
+        import boto3
+        from pathlib import Path
+        import json
+
+        # S3 configuration
+        s3_endpoint = os.environ.get('S3_ENDPOINT_URL')
+        s3_bucket = os.environ.get('S3_BUCKET', 'llm-evaluation-results')
+
+        # Initialize S3 client
+        s3_config = {'service_name': 's3'}
+        if s3_endpoint:
+            s3_config['endpoint_url'] = s3_endpoint
+
+        s3 = boto3.client(**s3_config)
+
+        # Upload all files
+        results_dir = Path("/workspace/shared-workspace/multilang_evaluation_results")
+        eval_id = os.environ.get('EVAL_ID', 'unknown')
+
+        uploaded_files = 0
+        for file_path in results_dir.rglob('*'):
+            if file_path.is_file():
+                relative_path = file_path.relative_to(results_dir)
+                s3_key = f"evaluations/{eval_id}/{relative_path}"
+
+                try:
+                    s3.upload_file(str(file_path), s3_bucket, s3_key)
+                    uploaded_files += 1
+                except Exception as e:
+                    print(f"⚠️  Failed to upload {file_path}: {e}")
+
+        print(f"✅ Uploaded {uploaded_files} files to S3 bucket: {s3_bucket}")
+        print(f"   S3 Path: s3://{s3_bucket}/evaluations/{eval_id}/")
+
+        S3_UPLOAD
+          fi
+        else
+          echo ""
+          echo "ℹ️  S3 upload disabled. Set S3_ENABLED=true to enable automatic uploads."
+        fi
+
+        echo ""
+        echo "=========================================================================="
+        echo "✅ Multi-Language Evaluation Complete!"
+        echo "=========================================================================="
+
+      env:
+        - name: MODEL_NAME
+          value: $(params.MODEL_NAME)
+        - name: MODEL_VERSION
+          value: $(params.MODEL_VERSION)
+        - name: TIMESTAMP
+          value: ""
+        - name: EVAL_ID
+          value: ""

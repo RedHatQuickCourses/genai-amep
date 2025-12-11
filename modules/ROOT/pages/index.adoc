@@ -5,14 +5,13 @@
 
 This guide documents an automated pipeline for evaluating Large Language Models (LLMs) across multiple languages using Red Hat OpenShift AI as the platform.
 
-*Developed by*: Red Hat AI Customer Adoption and Innovation team (CAI)
+*Original solution developed by*: Red Hat AI Customer Adoption and Innovation team (CAI) and can be found here:  https://github.com/rh-aiservices-bu/model-car-importer.git[model-car-importer repository, window=blank]
 
-== What This Pipeline Does
+== What This Step=-by-Step Pipeline Does
 
 This automated solution provides end-to-end capabilities for:
 
 . *Model Acquisition*: Download models from HuggingFace Hub
-. *Model Optimization*: Optional compression using llmcompressor
 . *Container Packaging*: Package models in Modelcar OCI containers
 . *Registry Management*: Register models in OpenShift AI Model Registry
 . *Model Deployment*: Deploy models using vLLM runtime for inference
