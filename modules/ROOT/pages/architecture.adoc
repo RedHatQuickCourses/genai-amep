@@ -1,0 +1,265 @@
+= Pipeline Architecture
+:navtitle: Architecture
+
+== Overview
+
+The Automated Multi-Language LLM Evaluation Pipeline is built on Red Hat OpenShift AI and uses Tekton for workflow orchestration.
+
+== High-Level Architecture
+
+[source]
+----
+┌─────────────────────────────────────────────────────────────────┐
+│                        HuggingFace Hub                          │
+└───────────────────────────────┬─────────────────────────────────┘
+                                │
+                                ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                     Model Download Task                         │
+│  - Downloads model weights and configuration                    │
+│  - Supports authentication tokens                               │
+│  - Selective file pattern matching                              │
+└───────────────────────────────┬─────────────────────────────────┘
+                                │
+                                ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                   Model Compression Task (Optional)             │
+│  - Uses llmcompressor for quantization                          │
+│  - Reduces model size and memory footprint                      │
+│  - Maintains acceptable accuracy levels                         │
+└───────────────────────────────┬─────────────────────────────────┘
+                                │
+                                ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                    Modelcar Packaging Task                      │
+│  - Creates OCI container with embedded model                    │
+│  - Uses OLOT for model layering                                 │
+│  - Pushes to container registry (Quay.io)                       │
+└───────────────────────────────┬─────────────────────────────────┘
+                                │
+                                ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                  Model Registry Integration                     │
+│  - Registers model version                                      │
+│  - Stores metadata and lineage                                  │
+│  - Enables model governance                                     │
+└───────────────────────────────┬─────────────────────────────────┘
+                                │
+                                ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                      vLLM Deployment                            │
+│  - Creates ServingRuntime                                       │
+│  - Deploys InferenceService                                     │
+│  - Configures GPU resources                                     │
+│  - Waits for service readiness                                  │
+└───────────────────────────────┬─────────────────────────────────┘
+                                │
+                ┌───────────────┴───────────────┐
+                │                               │
+                ▼                               ▼
+┌───────────────────────────┐   ┌──────────────────────────────┐
+│ Multi-Language Evaluation │   │   TrustyAI Evaluation        │
+│                           │   │                              │
+│ - English Benchmarks      │   │ - Gender Bias Detection      │
+│ - Spanish Benchmarks      │   │ - Multi-Language Fairness    │
+│ - Japanese Benchmarks     │   │ - Protected Attributes       │
+│ - Performance Metrics     │   │ - Bias Metrics               │
+└────────────┬──────────────┘   └────────────┬─────────────────┘
+             │                               │
+             └───────────────┬───────────────┘
+                             │
+                             ▼
+              ┌──────────────────────────────┐
+              │      S3 Storage              │
+              │                              │
+              │ - Results archival           │
+              │ - Historical comparison      │
+              │ - Metadata indexing          │
+              └──────────────┬───────────────┘
+                             │
+                             ▼
+              ┌──────────────────────────────┐
+              │   Jupyter Notebook Analysis  │
+              │                              │
+              │ - Data visualization         │
+              │ - Performance comparison     │
+              │ - Report generation          │
+              └──────────────────────────────┘
+----
+
+== Component Details
+
+=== Tekton Pipeline
+
+The pipeline is implemented as a Tekton Pipeline running on OpenShift:
+
+* *Orchestration*: Coordinates task execution and dependencies
+* *Workspaces*: Shared storage for passing data between tasks
+* *Parameters*: Configurable options for runtime customization
+* *Conditions*: Conditional task execution based on parameters
+
+==== Key Pipeline Parameters
+
+[cols="1,2,1"]
+|===
+|Parameter |Description |Default
+
+|`HUGGINGFACE_MODEL`
+|HuggingFace model repository (e.g., ibm-granite/granite-3.2-2b-instruct)
+|Required
+
+|`OCI_IMAGE`
+|Destination for modelcar image
+|Required
+
+|`COMPRESS_MODEL`
+|Enable model compression
+|false
+
+|`DEPLOY_MODEL`
+|Deploy as InferenceService
+|false
+
+|`MULTILANG_EVALUATE_MODEL`
+|Run multi-language evaluation
+|false
+
+|`LANGUAGES`
+|Languages to evaluate (comma-separated)
+|en,es,ja
+
+|`S3_ENABLED`
+|Upload results to S3
+|false
+
+|`TRUSTYAI_EVALUATE_MODEL`
+|Run TrustyAI bias evaluation
+|false
+|===
+
+=== Model Download
+
+Downloads models from HuggingFace Hub using the `huggingface_hub` Python library:
+
+* Supports private models with authentication tokens
+* Selective file downloading (e.g., only `.safetensors` files)
+* Progress tracking and error handling
+
+=== Model Compression
+
+Optional quantization using Neural Magic's llmcompressor:
+
+* 4-bit and 8-bit quantization support
+* Maintains model accuracy
+* Reduces memory footprint and improves inference speed
+
+=== Modelcar Packaging
+
+Creates container images with embedded models using OLOT (OCI Layer Object Transport):
+
+* Base image: Red Hat UBI9-micro
+* Model files stored as OCI layers
+* Compatible with OpenShift AI model serving
+
+=== vLLM Deployment
+
+High-performance model serving using vLLM:
+
+* GPU acceleration (NVIDIA GPUs)
+* OpenAI-compatible API endpoints
+* Optimized for throughput and latency
+* Configurable parameters (context length, batch size, etc.)
+
+=== Multi-Language Evaluation
+
+Evaluates model performance across languages using lm-evaluation-harness:
+
+==== Evaluation Tasks by Language
+
+*English (en)*:
+* ARC-Easy: Grade-school science questions
+* HellaSwag: Commonsense reasoning
+* WinoGrande: Pronoun resolution
+* TruthfulQA: Truthfulness assessment
+
+*Spanish (es)*:
+* BELEBELE Spanish: Reading comprehension
+* XNLI Spanish: Natural language inference
+
+*Japanese (ja)*:
+* BELEBELE Japanese: Reading comprehension
+* XNLI Japanese: Natural language inference
+
+=== TrustyAI Integration
+
+Optional bias and fairness evaluation:
+
+* Gender bias detection across languages
+* Protected attribute analysis
+* Fairness metrics computation
+* Currently in template form (requires TrustyAI service deployment)
+
+=== S3 Storage
+
+Results storage and management:
+
+* AWS S3 or S3-compatible storage (MinIO, etc.)
+* Automatic result uploads
+* Metadata tagging for easy retrieval
+* Historical comparison support
+
+=== Jupyter Notebook Analysis
+
+Interactive analysis and visualization:
+
+* Load results from local storage or S3
+* Generate performance comparison charts
+* Calculate language performance gaps
+* Export reports in multiple formats
+
+== Security Considerations
+
+=== Secrets Management
+
+The pipeline uses Kubernetes Secrets for sensitive data:
+
+* `huggingface-secret`: HuggingFace API token
+* `quay-auth`: Container registry credentials
+* `s3-credentials`: S3 access keys
+
+=== Service Accounts
+
+Custom service account (`modelcar-pipeline`) with appropriate RBAC permissions:
+
+* Create and manage InferenceServices
+* Access Model Registry
+* Read/write to shared workspaces
+
+=== Network Policies
+
+* Inference services are exposed through OpenShift Routes
+* TrustyAI service communication over internal cluster network
+* S3 access over HTTPS
+
+== Resource Requirements
+
+=== Minimum Requirements
+
+* OpenShift cluster with GPU nodes (NVIDIA)
+* At least 1 GPU per inference service
+* 32GB RAM for evaluation tasks
+* 100GB persistent storage for workspaces
+
+=== Recommended Configuration
+
+* Multiple GPU nodes for high availability
+* Dedicated namespace for model evaluation
+* S3-compatible object storage
+* Resource quotas configured
+
+== Next Steps
+
+* Review xref:prerequisites.adoc[Prerequisites]
+* Learn about xref:chapter1:index.adoc[Model Preparation]
+* Understand xref:chapter2:index.adoc[Model Deployment]
+* Explore xref:chapter3:index.adoc[Model Evaluation]

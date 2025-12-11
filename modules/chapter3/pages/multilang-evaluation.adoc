@@ -1,0 +1,395 @@
+= Multi-Language Evaluation
+:navtitle: Multi-Language Evaluation
+
+== Overview
+
+The Multi-Language Evaluation component tests your LLM's performance across English, Spanish, and Japanese using standardized benchmarks.
+
+== Why Multi-Language Evaluation?
+
+Testing models across languages helps you:
+
+* Identify language-specific performance gaps
+* Ensure consistent quality across user bases
+* Detect potential biases in multilingual contexts
+* Validate model localization efforts
+
+== Supported Languages
+
+[cols="1,2,3"]
+|===
+|Language Code |Language |Benchmarks
+
+|`en`
+|English
+|ARC-Easy, HellaSwag, WinoGrande, TruthfulQA
+
+|`es`
+|Spanish (Español)
+|BELEBELE Spanish, XNLI Spanish
+
+|`ja`
+|Japanese (日本語)
+|BELEBELE Japanese, XNLI Japanese
+|===
+
+== Benchmark Details
+
+=== English Benchmarks
+
+==== ARC-Easy
+* *Description*: Grade-school level science questions
+* *Metric*: Accuracy
+* *Tasks*: Multiple-choice question answering
+* *Why it matters*: Tests fundamental reasoning and knowledge retrieval
+
+==== HellaSwag
+* *Description*: Commonsense reasoning about everyday situations
+* *Metric*: Accuracy (normalized)
+* *Tasks*: Sentence completion
+* *Why it matters*: Evaluates common sense and world knowledge
+
+==== WinoGrande
+* *Description*: Pronoun resolution requiring commonsense reasoning
+* *Metric*: Accuracy
+* *Tasks*: Fill-in-the-blank with pronouns
+* *Why it matters*: Tests understanding of context and entities
+
+==== TruthfulQA
+* *Description*: Questions designed to test truthfulness
+* *Metric*: Multiple-choice accuracy
+* *Tasks*: Identify truthful answers
+* *Why it matters*: Measures model's tendency to generate factual responses
+
+=== Spanish Benchmarks
+
+==== BELEBELE Spanish
+* *Description*: Reading comprehension in Spanish
+* *Metric*: Accuracy
+* *Tasks*: Answer questions about passages
+* *Why it matters*: Tests language understanding in Spanish
+
+==== XNLI Spanish
+* *Description*: Cross-lingual natural language inference
+* *Metric*: Accuracy
+* *Tasks*: Determine entailment, contradiction, or neutral
+* *Why it matters*: Evaluates logical reasoning in Spanish
+
+=== Japanese Benchmarks
+
+==== BELEBELE Japanese
+* *Description*: Reading comprehension in Japanese
+* *Metric*: Accuracy
+* *Tasks*: Answer questions about passages
+* *Why it matters*: Tests language understanding in Japanese
+
+==== XNLI Japanese
+* *Description*: Cross-lingual natural language inference
+* *Metric*: Accuracy
+* *Tasks*: Determine entailment, contradiction, or neutral
+* *Why it matters*: Evaluates logical reasoning in Japanese
+
+== Running the Evaluation
+
+=== Prerequisites
+
+Before running multi-language evaluation:
+
+. Model must be deployed as an InferenceService
+. InferenceService must be in "Ready" state
+. Sufficient GPU resources available for evaluation
+. (Optional) S3 storage configured for result persistence
+
+=== Configuration Parameters
+
+[source,yaml]
+----
+# Enable multi-language evaluation
+MULTILANG_EVALUATE_MODEL: "true"
+
+# Languages to evaluate (comma-separated)
+# Options: en, es, ja
+LANGUAGES: "en,es,ja"
+
+# Enable S3 upload of results
+S3_ENABLED: "false"
+----
+
+=== Running via Pipeline
+
+To run the full pipeline with multi-language evaluation:
+
+[source,bash]
+----
+# Apply the pipeline tasks
+oc apply -f openshift/modelcar-multilang-evaluate-task.yaml
+
+# Run the pipeline with multi-language evaluation enabled
+oc create -f - <<EOF
+apiVersion: tekton.dev/v1beta1
+kind: PipelineRun
+metadata:
+  generateName: modelcar-run-
+spec:
+  pipelineRef:
+    name: modelcar-pipeline
+  params:
+    - name: HUGGINGFACE_MODEL
+      value: "ibm-granite/granite-3.2-2b-instruct"
+    - name: OCI_IMAGE
+      value: "quay.io/your-org/granite-3.2-2b"
+    - name: MODEL_NAME
+      value: "granite-3.2-2b"
+    - name: MODEL_VERSION
+      value: "1.0.0"
+    - name: DEPLOY_MODEL
+      value: "true"
+    - name: MULTILANG_EVALUATE_MODEL
+      value: "true"
+    - name: LANGUAGES
+      value: "en,es,ja"
+    - name: S3_ENABLED
+      value: "false"
+  workspaces:
+    - name: shared-workspace
+      volumeClaimTemplate:
+        spec:
+          accessModes:
+            - ReadWriteOnce
+          resources:
+            requests:
+              storage: 100Gi
+    - name: quay-auth-workspace
+      secret:
+        secretName: quay-auth
+EOF
+----
+
+=== Running Standalone
+
+To run evaluation on an already-deployed model:
+
+[source,bash]
+----
+# Create a TaskRun
+oc create -f - <<EOF
+apiVersion: tekton.dev/v1beta1
+kind: TaskRun
+metadata:
+  generateName: multilang-eval-
+spec:
+  taskRef:
+    name: multilang-evaluate-model
+  params:
+    - name: EVALUATE_MODEL
+      value: "true"
+    - name: MODEL_NAME
+      value: "granite-3.2-2b"
+    - name: MODEL_VERSION
+      value: "1.0.0"
+    - name: LANGUAGES
+      value: "en,es,ja"
+    - name: S3_ENABLED
+      value: "false"
+    - name: SKIP_TASK
+      value: ""
+    - name: SKIP_TASKS
+      value: ""
+  workspaces:
+    - name: shared-workspace
+      persistentVolumeClaim:
+        claimName: evaluation-workspace
+EOF
+----
+
+== Evaluation Results
+
+=== Result Structure
+
+Results are saved in the shared workspace:
+
+[source]
+----
+/workspace/shared-workspace/multilang_evaluation_results/
+├── cross_language_summary.json     # Overall summary
+├── en/                             # English results
+│   ├── results.json
+│   ├── metadata.json
+│   └── samples/
+├── es/                             # Spanish results
+│   ├── results.json
+│   ├── metadata.json
+│   └── samples/
+└── ja/                             # Japanese results
+    ├── results.json
+    ├── metadata.json
+    └── samples/
+----
+
+=== Sample Results Format
+
+[source,json]
+----
+{
+  "model_name": "granite-3.2-2b",
+  "model_version": "1.0.0",
+  "timestamp": "20231210_143022",
+  "languages": {
+    "en": {
+      "arc_easy": {
+        "acc": 0.7823,
+        "acc_norm": 0.7654
+      },
+      "hellaswag": {
+        "acc": 0.6234,
+        "acc_norm": 0.6890
+      }
+    },
+    "es": {
+      "belebele_spa_Latn": {
+        "acc": 0.6543
+      },
+      "xnli_es": {
+        "acc": 0.7123
+      }
+    },
+    "ja": {
+      "belebele_jpn_Jpan": {
+        "acc": 0.6012
+      },
+      "xnli_ja": {
+        "acc": 0.6789
+      }
+    }
+  }
+}
+----
+
+=== Interpreting Results
+
+==== Accuracy Metrics
+
+* *acc*: Raw accuracy (0.0 to 1.0)
+* *acc_norm*: Normalized accuracy (length-normalized for some tasks)
+* Higher is better for all metrics
+
+==== Performance Benchmarks
+
+Typical ranges for different model sizes:
+
+[cols="1,2,2,2"]
+|===
+|Model Size |English (avg) |Spanish (avg) |Japanese (avg)
+
+|2B parameters
+|0.60 - 0.70
+|0.55 - 0.65
+|0.50 - 0.60
+
+|7B parameters
+|0.70 - 0.80
+|0.65 - 0.75
+|0.60 - 0.70
+
+|13B+ parameters
+|0.75 - 0.85
+|0.70 - 0.80
+|0.65 - 0.75
+|===
+
+NOTE: These are approximate ranges. Actual performance depends on model architecture, training data, and fine-tuning.
+
+==== Language Performance Gaps
+
+It's common to see performance gaps across languages:
+
+* English typically performs best (most training data)
+* Spanish performance is usually 5-10% lower than English
+* Japanese may show 10-15% lower performance than English
+
+These gaps help identify:
+
+* Need for additional multilingual training
+* Language-specific fine-tuning requirements
+* Potential deployment considerations
+
+== Customizing Evaluations
+
+=== Adding New Languages
+
+To add support for additional languages, edit the task YAML:
+
+[source,yaml]
+----
+# In modelcar-multilang-evaluate-task.yaml
+declare -A LANGUAGE_TASKS
+LANGUAGE_TASKS[en]="arc_easy,hellaswag,winogrande,truthfulqa_mc2"
+LANGUAGE_TASKS[es]="belebele_spa_Latn,xnli_es"
+LANGUAGE_TASKS[ja]="belebele_jpn_Jpan,xnli_ja"
+LANGUAGE_TASKS[fr]="belebele_fra_Latn,xnli_fr"  # Add French
+----
+
+=== Modifying Benchmark Tasks
+
+To change which benchmarks are run:
+
+[source,yaml]
+----
+# Modify the task list for a language
+LANGUAGE_TASKS[en]="arc_easy,arc_challenge,mmlu"  # Add MMLU, remove others
+----
+
+Available tasks can be found in the lm-evaluation-harness documentation.
+
+=== Adjusting Evaluation Parameters
+
+Key parameters that affect evaluation:
+
+[source,bash]
+----
+# Number of few-shot examples (0-5 typical)
+--num_fewshot 5
+
+# Batch size (affects speed and GPU memory)
+--batch_size 8
+
+# Limit number of samples (for testing)
+--limit 100
+----
+
+== Troubleshooting
+
+=== Common Issues
+
+==== GPU Out of Memory
+
+*Symptom*: Task fails with CUDA OOM error
+
+*Solutions*:
+* Reduce batch size in task configuration
+* Reduce max_model_len for the model
+* Use model compression before evaluation
+
+==== Task Timeout
+
+*Symptom*: Task exceeds timeout and is terminated
+
+*Solutions*:
+* Increase task timeout in pipeline YAML
+* Reduce number of evaluation samples
+* Use fewer languages in a single run
+
+==== Missing Benchmarks
+
+*Symptom*: Specific benchmark not found
+
+*Solutions*:
+* Verify lm-eval version supports the benchmark
+* Check benchmark name spelling
+* Consult lm-evaluation-harness task list
+
+== Next Steps
+
+* Learn about xref:s3-storage.adoc[Storing Results in S3]
+* Explore xref:results-analysis.adoc[Analyzing and Visualizing Results]
+* Understand xref:trustyai-integration.adoc[TrustyAI Integration]

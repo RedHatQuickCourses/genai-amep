@@ -1,2 +1,4 @@
-* xref:index.adoc[]
-** xref:section1.adoc[]
+* xref:index.adoc[Model Deployment]
+** xref:vllm-deployment.adoc[vLLM Deployment on OpenShift AI]
+** xref:inference-service.adoc[InferenceService Configuration]
+** xref:testing-deployment.adoc[Testing Your Deployment]
