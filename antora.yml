@@ -1,6 +1,6 @@
-name: Automated Multi Language LLM Evaluation Pipeline
-title: Automated Multi Language LLM Evaluation Pipeline
-version: 1
+name: genai-amep
+title: Automated Multi-Language LLM Evaluation Pipeline
+version: 3.0
 nav:
 - modules/ROOT/nav.adoc
 - modules/chapter1/nav.adoc
