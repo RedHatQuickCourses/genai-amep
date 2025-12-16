@@ -1,0 +1,823 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>ModelCar Pipeline Deployment :: Automated Multi Language LLM Evaluation Pipeline</title>
+    <link rel="prev" href="infrastructure-setup.html">
+    <link rel="next" href="evaluation-pipeline.html">
+    <meta name="generator" content="Antora 3.1.3">
+    <link rel="stylesheet" href="../../../_/css/site.css">
+    <script>var uiRootPath = '../../../_'</script>
+  </head>
+  <body class="article">
+<header class="header">
+  <nav class="navbar">
+    <div class="navbar-brand">
+      <a class="navbar-item" href="https://www.redhat.com" target="_blank"><img src="../../../_/img/redhat-logo.png" height="40px" alt="Red Hat"></a>
+      <a class="navbar-item" style="font-size: 24px; color: white" href="../../..">Automated Multi Language LLM Evaluation Pipeline</a>
+      <button class="navbar-burger" data-target="topbar-nav">
+        <span></span>
+        <span></span>
+        <span></span>
+      </button>
+    </div>
+    <div id="topbar-nav" class="navbar-menu">
+      <div class="navbar-end">
+        <a class="navbar-item" href="https://github.com/RedHatQuickCourses/changeme/issues" target="_blank">Report Issues</a>
+      </div>
+    </div>
+  </nav>
+</header><div class="body">
+<div class="nav-container" data-component="genai-amep" data-version="3">
+  <aside class="nav">
+    <div class="panels">
+<div class="nav-panel-menu is-active" data-panel="menu">
+  <nav class="nav-menu">
+    <h3 class="title"><a href="../index.html">Automated Multi-Language LLM Evaluation Pipeline</a></h3>
+<ul class="nav-list">
+  <li class="nav-item" data-depth="0">
+<ul class="nav-list">
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../index.html">Introduction</a>
+  </li>
+</ul>
+  </li>
+  <li class="nav-item" data-depth="0">
+<ul class="nav-list">
+  <li class="nav-item" data-depth="1">
+    <button class="nav-item-toggle"></button>
+    <a class="nav-link" href="index.html">Platform preparation</a>
+<ul class="nav-list">
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="infrastructure-setup.html">Infrastructure setup</a>
+  </li>
+  <li class="nav-item is-current-page" data-depth="2">
+    <a class="nav-link" href="modelcar-pipeline.html">ModelCar Pipeline Deployment</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="evaluation-pipeline.html">Evaluation Pipeline Deployment</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="results-analysis.html">Results Analysis and Visualization</a>
+  </li>
+</ul>
+  </li>
+</ul>
+  </li>
+</ul>
+  </nav>
+</div>
+<div class="nav-panel-explore" data-panel="explore">
+  <div class="context">
+    <span class="title">Automated Multi-Language LLM Evaluation Pipeline</span>
+    <span class="version">3</span>
+  </div>
+  <ul class="components">
+    <li class="component is-current">
+      <a class="title" href="../index.html">Automated Multi-Language LLM Evaluation Pipeline</a>
+      <ul class="versions">
+        <li class="version is-current is-latest">
+          <a href="../index.html">3</a>
+        </li>
+      </ul>
+    </li>
+  </ul>
+</div>
+    </div>
+  </aside>
+</div>
+<main class="article">
+<div class="toolbar" role="navigation">
+<button class="nav-toggle"></button>
+  <a href="../index.html" class="home-link"></a>
+<nav class="breadcrumbs" aria-label="breadcrumbs">
+  <ul>
+    <li><a href="../index.html">Automated Multi-Language LLM Evaluation Pipeline</a></li>
+    <li><a href="index.html">Platform preparation</a></li>
+    <li><a href="modelcar-pipeline.html">ModelCar Pipeline Deployment</a></li>
+  </ul>
+</nav>
+</div>
+  <div class="content">
+<aside class="toc sidebar" data-title="Contents" data-levels="2">
+  <div class="toc-menu"></div>
+</aside>
+<article class="doc">
+<h1 class="page">ModelCar Pipeline Deployment</h1>
+<div id="preamble">
+<div class="sectionbody">
+<div class="paragraph">
+<p>This guide covers the deployment and usage of the ModelCar pipeline, which automates the packaging of AI models as OCI images on OpenShift AI.</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_overview"><a class="anchor" href="#_overview"></a>Overview</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>The ModelCar pipeline automates the complete workflow of downloading, optionally compressing, packaging, and deploying AI models. It uses Tekton to orchestrate the following tasks:</p>
+</div>
+<div class="olist arabic">
+<ol class="arabic">
+<li>
+<p>Clean up workspace</p>
+</li>
+<li>
+<p>Download model from Hugging Face</p>
+</li>
+<li>
+<p>Compress model (optional)</p>
+</li>
+<li>
+<p>Build ModelCar OCI image using OLOT</p>
+</li>
+<li>
+<p>Push image to Quay registry</p>
+</li>
+</ol>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_prerequisites"><a class="anchor" href="#_prerequisites"></a>Prerequisites</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>Before deploying the ModelCar pipeline, ensure you have completed:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p><a href="infrastructure-setup.html" class="xref page">Infrastructure Setup</a> - Quay, Model Registry, and MinIO deployed</p>
+</li>
+<li>
+<p>Pipeline namespace created (e.g., <code>modelcar-pipelines</code>)</p>
+</li>
+<li>
+<p>Secrets configured:</p>
+<div class="ulist">
+<ul>
+<li>
+<p><code>quay-auth-secret</code> - Quay robot account credentials</p>
+</li>
+<li>
+<p><code>huggingface-secret</code> - Hugging Face token (for gated models)</p>
+</li>
+<li>
+<p><code>s3-credentials</code> - MinIO/S3 credentials</p>
+</li>
+</ul>
+</div>
+</li>
+</ul>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_deploy_pipeline_tasks"><a class="anchor" href="#_deploy_pipeline_tasks"></a>Deploy Pipeline Tasks</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>The ModelCar pipeline consists of several reusable Tekton tasks.</p>
+</div>
+<div class="sect2">
+<h3 id="_create_pipeline_storage"><a class="anchor" href="#_create_pipeline_storage"></a>Create Pipeline Storage</h3>
+<div class="paragraph">
+<p>Create a PersistentVolumeClaim for pipeline workspace:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">oc apply -f deploy/openshift/modelcar-storage.yaml -n modelcar-pipelines</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>This creates a PVC named <code>modelcar-storage</code> for storing model files during pipeline execution.</p>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_create_required_configmaps"><a class="anchor" href="#_create_required_configmaps"></a>Create Required ConfigMaps</h3>
+<div class="paragraph">
+<p>The pipeline requires ConfigMaps for compression and registration scripts:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash"># Create compress-script ConfigMap
+oc create configmap compress-script \
+  --from-file=compress.py=deploy/tasks/compress/compress.py \
+  -n modelcar-pipelines
+
+# Create register-script ConfigMap
+oc create configmap register-script \
+  --from-file=register.py=deploy/tasks/register-with-registry/register.py \
+  -n modelcar-pipelines</code></pre>
+</div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_create_serviceaccount_and_rbac"><a class="anchor" href="#_create_serviceaccount_and_rbac"></a>Create ServiceAccount and RBAC</h3>
+<div class="paragraph">
+<p>The pipeline needs a ServiceAccount with permissions to create InferenceServices and ServingRuntimes:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash"># Create ServiceAccount
+oc create serviceaccount modelcar-pipeline -n modelcar-pipelines
+
+# Apply RBAC permissions
+oc apply -f deploy/openshift/role.yaml -n modelcar-pipelines
+oc apply -f deploy/openshift/role-binding.yaml -n modelcar-pipelines</code></pre>
+</div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_deploy_pipeline_tasks_2"><a class="anchor" href="#_deploy_pipeline_tasks_2"></a>Deploy Pipeline Tasks</h3>
+<div class="paragraph">
+<p>Deploy the individual Tekton tasks that the pipeline references:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash"># Deploy all required tasks
+oc apply -f deploy/openshift/modelcar-compress-task.yaml -n modelcar-pipelines
+oc apply -f deploy/openshift/modelcar-evaluate-task.yaml -n modelcar-pipelines
+oc apply -f deploy/openshift/modelcar-guidellm-containerized-task.yaml -n modelcar-pipelines
+oc apply -f deploy/openshift/modelcar-multilang-evaluate-task.yaml -n modelcar-pipelines
+oc apply -f deploy/openshift/modelcar-trustyai-task.yaml -n modelcar-pipelines</code></pre>
+</div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_deploy_main_pipeline"><a class="anchor" href="#_deploy_main_pipeline"></a>Deploy Main Pipeline</h3>
+<div class="paragraph">
+<p>Deploy the main ModelCar pipeline:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">oc apply -f deploy/openshift/modelcar-pipeline.yaml -n modelcar-pipelines</code></pre>
+</div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_verify_pipeline_deployment"><a class="anchor" href="#_verify_pipeline_deployment"></a>Verify Pipeline Deployment</h3>
+<div class="paragraph">
+<p>Check that all tasks and the pipeline are created:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">oc get tasks -n modelcar-pipelines
+oc get pipelines -n modelcar-pipelines
+oc get configmaps -n modelcar-pipelines | grep -E "(compress-script|register-script)"
+oc get serviceaccount modelcar-pipeline -n modelcar-pipelines</code></pre>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_running_the_modelcar_pipeline"><a class="anchor" href="#_running_the_modelcar_pipeline"></a>Running the ModelCar Pipeline</h2>
+<div class="sectionbody">
+<div class="sect2">
+<h3 id="_basic_pipeline_run"><a class="anchor" href="#_basic_pipeline_run"></a>Basic Pipeline Run</h3>
+<div class="paragraph">
+<p>To package a model from Hugging Face:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">oc create -f - &lt;&lt;EOF
+apiVersion: tekton.dev/v1beta1
+kind: PipelineRun
+metadata:
+  generateName: modelcar-run-
+  namespace: modelcar-pipelines
+spec:
+  pipelineRef:
+    name: modelcar-pipeline
+  params:
+    - name: HUGGINGFACE_MODEL
+      value: "ibm-granite/granite-3.3-2b-instruct"
+    - name: OCI_IMAGE
+      value: "quay.io/&lt;YOUR_ORG&gt;/granite-3.3-2b-instruct"
+    - name: MODEL_NAME
+      value: "granite-3.3-2b-instruct"
+    - name: MODEL_VERSION
+      value: "1.0.0"
+    - name: MODEL_REGISTRY_URL
+      value: "http://mysql.rhoai-model-registries.svc.cluster.local:3306"
+  workspaces:
+    - name: shared-workspace
+      persistentVolumeClaim:
+        claimName: modelcar-storage
+    - name: quay-auth-workspace
+      secret:
+        secretName: quay-auth-secret
+EOF</code></pre>
+</div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_pipeline_with_model_compression"><a class="anchor" href="#_pipeline_with_model_compression"></a>Pipeline with Model Compression</h3>
+<div class="paragraph">
+<p>To compress the model before packaging:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">oc create -f - &lt;&lt;EOF
+apiVersion: tekton.dev/v1beta1
+kind: PipelineRun
+metadata:
+  generateName: modelcar-compress-run-
+  namespace: modelcar-pipelines
+spec:
+  pipelineRef:
+    name: modelcar-pipeline
+  params:
+    - name: HUGGINGFACE_MODEL
+      value: "ibm-granite/granite-3.3-8b-instruct"
+    - name: OCI_IMAGE
+      value: "quay.io/&lt;YOUR_ORG&gt;/granite-3.3-8b-instruct-compressed"
+    - name: MODEL_NAME
+      value: "granite-3.3-8b-instruct-compressed"
+    - name: MODEL_VERSION
+      value: "1.0.0"
+    - name: COMPRESS_MODEL
+      value: "true"
+    - name: MODEL_REGISTRY_URL
+      value: "http://mysql.rhoai-model-registries.svc.cluster.local:3306"
+  workspaces:
+    - name: shared-workspace
+      persistentVolumeClaim:
+        claimName: modelcar-storage
+    - name: quay-auth-workspace
+      secret:
+        secretName: quay-auth-secret
+EOF</code></pre>
+</div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_pipeline_with_deployment_and_evaluation"><a class="anchor" href="#_pipeline_with_deployment_and_evaluation"></a>Pipeline with Deployment and Evaluation</h3>
+<div class="paragraph">
+<p>To package, deploy, and evaluate a model:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">oc create -f - &lt;&lt;EOF
+apiVersion: tekton.dev/v1beta1
+kind: PipelineRun
+metadata:
+  generateName: modelcar-full-run-
+  namespace: modelcar-pipelines
+spec:
+  pipelineRef:
+    name: modelcar-pipeline
+  params:
+    - name: HUGGINGFACE_MODEL
+      value: "ibm-granite/granite-3.3-2b-instruct"
+    - name: OCI_IMAGE
+      value: "quay.io/&lt;YOUR_ORG&gt;/granite-3.3-2b-instruct"
+    - name: MODEL_NAME
+      value: "granite-3.3-2b-instruct"
+    - name: MODEL_VERSION
+      value: "1.0.0"
+    - name: MODEL_REGISTRY_URL
+      value: "http://mysql.rhoai-model-registries.svc.cluster.local:3306"
+    - name: DEPLOY_MODEL
+      value: "true"
+    - name: EVALUATE_MODEL
+      value: "true"
+    - name: TASKS
+      value: "arc_easy,hellaswag,winogrande,humaneval,mbpp"
+    - name: GUIDELLM_EVALUATE_MODEL
+      value: "true"
+    - name: S3_ENABLED
+      value: "true"
+    - name: MAX_MODEL_LEN
+      value: "8192"
+  workspaces:
+    - name: shared-workspace
+      persistentVolumeClaim:
+        claimName: modelcar-storage
+    - name: quay-auth-workspace
+      secret:
+        secretName: quay-auth-secret
+EOF</code></pre>
+</div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_pipeline_with_gated_model"><a class="anchor" href="#_pipeline_with_gated_model"></a>Pipeline with Gated Model</h3>
+<div class="paragraph">
+<p>For gated models requiring authentication:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">oc create -f - &lt;&lt;EOF
+apiVersion: tekton.dev/v1beta1
+kind: PipelineRun
+metadata:
+  generateName: modelcar-gated-run-
+  namespace: modelcar-pipelines
+spec:
+  pipelineRef:
+    name: modelcar-pipeline
+  params:
+    - name: HUGGINGFACE_MODEL
+      value: "meta-llama/Llama-3.2-3B-Instruct"
+    - name: OCI_IMAGE
+      value: "quay.io/&lt;YOUR_ORG&gt;/llama-3.2-3b-instruct"
+    - name: MODEL_NAME
+      value: "llama-3.2-3b-instruct"
+    - name: MODEL_VERSION
+      value: "1.0.0"
+    - name: MODEL_REGISTRY_URL
+      value: "http://mysql.rhoai-model-registries.svc.cluster.local:3306"
+  workspaces:
+    - name: shared-workspace
+      persistentVolumeClaim:
+        claimName: modelcar-storage
+    - name: quay-auth-workspace
+      secret:
+        secretName: quay-auth-secret
+EOF</code></pre>
+</div>
+</div>
+<div class="admonitionblock note">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-note" title="Note"></i>
+</td>
+<td class="content">
+Ensure the <code>huggingface-secret</code> contains a valid token with access to the gated model.
+</td>
+</tr>
+</table>
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_pipeline_parameters_reference"><a class="anchor" href="#_pipeline_parameters_reference"></a>Pipeline Parameters Reference</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>The ModelCar pipeline supports the following parameters:</p>
+</div>
+<table class="tableblock frame-all grid-all stretch">
+<colgroup>
+<col style="width: 16.6666%;">
+<col style="width: 33.3333%;">
+<col style="width: 16.6666%;">
+<col style="width: 33.3335%;">
+</colgroup>
+<thead>
+<tr>
+<th class="tableblock halign-left valign-top">Parameter</th>
+<th class="tableblock halign-left valign-top">Description</th>
+<th class="tableblock halign-left valign-top">Required</th>
+<th class="tableblock halign-left valign-top">Default</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>HUGGINGFACE_MODEL</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Hugging Face model repository (e.g., <code>ibm-granite/granite-3.3-2b-instruct</code>)</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Yes</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">N/A</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>OCI_IMAGE</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Destination OCI image (e.g., <code>quay.io/org/model:tag</code>)</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Yes</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">N/A</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>HUGGINGFACE_ALLOW_PATTERNS</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">File patterns to download (e.g., <code>"<strong>.safetensors", "</strong>.json"</code>)</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">No</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>*.safetensors, *.json, *.txt</code></p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>COMPRESS_MODEL</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Whether to compress the model (<code>true</code>/<code>false</code>)</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">No</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>false</code></p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>MODEL_NAME</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Name to register in model registry</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Yes</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">N/A</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>MODEL_VERSION</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Version to register in model registry</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">No</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>1.0.0</code></p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>MODEL_REGISTRY_URL</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">URL of the model registry service</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Yes</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">N/A</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>DEPLOY_MODEL</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Whether to deploy as InferenceService (<code>true</code>/<code>false</code>)</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">No</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>false</code></p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>EVALUATE_MODEL</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Whether to run evaluation (<code>true</code>/<code>false</code>)</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">No</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>false</code></p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>TASKS</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Comma-separated list of evaluation tasks</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">No</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>humaneval,mbpp</code></p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>GUIDELLM_EVALUATE_MODEL</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Whether to run GuideLLM evaluation (<code>true</code>/<code>false</code>)</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">No</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>false</code></p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>MULTILANG_EVALUATE_MODEL</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Whether to run multi-language evaluation (<code>true</code>/<code>false</code>)</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">No</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>false</code></p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>LANGUAGES</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Comma-separated list of languages to evaluate (<code>en,es,ja</code>)</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">No</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>en,es,ja</code></p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>TRUSTYAI_EVALUATE_MODEL</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Whether to run TrustyAI evaluation (<code>true</code>/<code>false</code>)</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">No</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>false</code></p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>TRUSTYAI_SERVICE_URL</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">TrustyAI service endpoint URL</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">No</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code><a href="http://trustyai-service:8080" class="bare">http://trustyai-service:8080</a></code></p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>S3_ENABLED</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Whether to upload results to S3 (<code>true</code>/<code>false</code>)</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">No</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>false</code></p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>SKIP_TASKS</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Comma-separated list of tasks to skip</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">No</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">``</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>MAX_MODEL_LEN</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Maximum model length for vLLM</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">No</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>8192</code></p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>VLLM_ARGS</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Additional vLLM arguments</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">No</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">``</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_monitoring_pipeline_execution"><a class="anchor" href="#_monitoring_pipeline_execution"></a>Monitoring Pipeline Execution</h2>
+<div class="sectionbody">
+<div class="sect2">
+<h3 id="_view_pipeline_run_status"><a class="anchor" href="#_view_pipeline_run_status"></a>View Pipeline Run Status</h3>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash"># List all pipeline runs
+oc get pipelinerun -n modelcar-pipelines
+
+# Watch a specific pipeline run
+oc get pipelinerun &lt;PIPELINERUN_NAME&gt; -n modelcar-pipelines -w
+
+# Describe pipeline run for details
+oc describe pipelinerun &lt;PIPELINERUN_NAME&gt; -n modelcar-pipelines</code></pre>
+</div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_view_task_logs"><a class="anchor" href="#_view_task_logs"></a>View Task Logs</h3>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash"># List task runs
+oc get taskrun -n modelcar-pipelines
+
+# View logs for a specific task
+oc logs -l tekton.dev/pipelineRun=&lt;PIPELINERUN_NAME&gt; \
+  -l tekton.dev/pipelineTask=&lt;TASK_NAME&gt; \
+  -n modelcar-pipelines
+
+# Examples:
+# View download task logs
+oc logs -l tekton.dev/pipelineRun=&lt;PIPELINERUN_NAME&gt; \
+  -l tekton.dev/pipelineTask=pull-model-from-huggingface \
+  -n modelcar-pipelines
+
+# View compression task logs
+oc logs -l tekton.dev/pipelineRun=&lt;PIPELINERUN_NAME&gt; \
+  -l tekton.dev/pipelineTask=compress-model \
+  -n modelcar-pipelines</code></pre>
+</div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_using_openshift_console"><a class="anchor" href="#_using_openshift_console"></a>Using OpenShift Console</h3>
+<div class="olist arabic">
+<ol class="arabic">
+<li>
+<p>Navigate to Pipelines → PipelineRuns in the OpenShift Console</p>
+</li>
+<li>
+<p>Select your namespace (<code>modelcar-pipelines</code>)</p>
+</li>
+<li>
+<p>Click on a pipeline run to view details</p>
+</li>
+<li>
+<p>View logs for each task in the visual pipeline graph</p>
+</li>
+</ol>
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_container_images"><a class="anchor" href="#_container_images"></a>Container Images</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>The pipeline uses several custom container images that must be built and pushed to your registry:</p>
+</div>
+<div class="sect2">
+<h3 id="_hugging_face_modelcar_builder"><a class="anchor" href="#_hugging_face_modelcar_builder"></a>Hugging Face ModelCar Builder</h3>
+<div class="paragraph">
+<p>Location: <code>deploy/tasks/huggingface-modelcar-builder/</code></p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">cd deploy/tasks/huggingface-modelcar-builder
+podman build --platform linux/amd64 \
+  -t quay.io/&lt;YOUR_ORG&gt;/huggingface-modelcar-builder:latest \
+  -f Containerfile .
+podman push quay.io/&lt;YOUR_ORG&gt;/huggingface-modelcar-builder:latest</code></pre>
+</div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_modelcar_builder"><a class="anchor" href="#_modelcar_builder"></a>ModelCar Builder</h3>
+<div class="paragraph">
+<p>Location: <code>deploy/tasks/build-and-push-modelcar/</code></p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">cd deploy/tasks/build-and-push-modelcar
+podman build --platform linux/amd64 \
+  -t quay.io/&lt;YOUR_ORG&gt;/modelcar-builder:latest \
+  -f Containerfile .
+podman push quay.io/&lt;YOUR_ORG&gt;/modelcar-builder:latest</code></pre>
+</div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_modelcar_registry_integration"><a class="anchor" href="#_modelcar_registry_integration"></a>ModelCar Registry Integration</h3>
+<div class="paragraph">
+<p>Location: <code>deploy/tasks/register-with-registry/</code></p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">cd deploy/tasks/register-with-registry
+podman build --platform linux/amd64 \
+  -t quay.io/&lt;YOUR_ORG&gt;/modelcar-register:latest \
+  -f Containerfile .
+podman push quay.io/&lt;YOUR_ORG&gt;/modelcar-register:latest</code></pre>
+</div>
+</div>
+<div class="admonitionblock note">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-note" title="Note"></i>
+</td>
+<td class="content">
+Update the image references in the pipeline YAML files to point to your custom images.
+</td>
+</tr>
+</table>
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_troubleshooting"><a class="anchor" href="#_troubleshooting"></a>Troubleshooting</h2>
+<div class="sectionbody">
+<div class="sect2">
+<h3 id="_pipeline_run_fails_at_download_step"><a class="anchor" href="#_pipeline_run_fails_at_download_step"></a>Pipeline Run Fails at Download Step</h3>
+<div class="paragraph">
+<p>Check Hugging Face token and model access:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash"># Verify secret exists
+oc get secret huggingface-secret -n modelcar-pipelines
+
+# Check if model is gated
+# Visit https://huggingface.co/&lt;MODEL_REPO&gt; and verify access</code></pre>
+</div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_pipeline_run_fails_at_push_step"><a class="anchor" href="#_pipeline_run_fails_at_push_step"></a>Pipeline Run Fails at Push Step</h3>
+<div class="paragraph">
+<p>Check Quay authentication:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash"># Verify Quay secret exists
+oc get secret quay-auth-secret -n modelcar-pipelines
+
+# Test Quay login
+podman login &lt;QUAY_ROUTE&gt; --authfile=/path/to/auth.json</code></pre>
+</div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_model_registry_connection_issues"><a class="anchor" href="#_model_registry_connection_issues"></a>Model Registry Connection Issues</h3>
+<div class="paragraph">
+<p>Verify Model Registry connectivity:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash"># Check MySQL service
+oc get svc mysql -n rhoai-model-registries
+
+# Test connection from pipeline namespace
+oc run test-mysql --rm -it --image=mysql:8.0 -n modelcar-pipelines -- \
+  mysql -h mysql.rhoai-model-registries.svc.cluster.local \
+  -u &lt;USERNAME&gt; -p&lt;PASSWORD&gt; -e "SHOW DATABASES;"</code></pre>
+</div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_out_of_memory_errors"><a class="anchor" href="#_out_of_memory_errors"></a>Out of Memory Errors</h3>
+<div class="paragraph">
+<p>Increase memory limits in pipeline task specs or use compression:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash"># Edit pipeline to increase memory
+oc edit pipeline modelcar-pipeline -n modelcar-pipelines
+
+# Or set COMPRESS_MODEL=true to reduce memory usage</code></pre>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_next_steps"><a class="anchor" href="#_next_steps"></a>Next Steps</h2>
+<div class="sectionbody">
+<div class="ulist">
+<ul>
+<li>
+<p><a href="evaluation-pipeline.html" class="xref page">Deploy Evaluation Pipeline</a> - Set up model evaluation workflows</p>
+</li>
+<li>
+<p>Learn about customizing evaluation tasks</p>
+</li>
+<li>
+<p>Integrate with CI/CD workflows</p>
+</li>
+</ul>
+</div>
+</div>
+</div>
+<nav class="pagination">
+  <span class="prev"><a href="infrastructure-setup.html">Infrastructure setup</a></span>
+  <span class="next"><a href="evaluation-pipeline.html">Evaluation Pipeline Deployment</a></span>
+</nav>
+</article>
+  </div>
+</main>
+</div>
+<footer class="footer">
+  <img src="../../../_/img/rhl-logo-red.png" height="40px" alt="Red Hat"  href="https://redhat.com" >
+</footer><script id="site-script" src="../../../_/js/site.js" data-ui-root-path="../../../_"></script>
+<script async src="../../../_/js/vendor/highlight.js"></script>
+  </body>
+</html>

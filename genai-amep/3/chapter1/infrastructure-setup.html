@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width,initial-scale=1">
     <title>Infrastructure Bootstrap :: Automated Multi Language LLM Evaluation Pipeline</title>
     <link rel="prev" href="index.html">
-    <link rel="next" href="../chapter2/index.html">
+    <link rel="next" href="modelcar-pipeline.html">
     <meta name="description" content="Deploying the necessary prerequisites (Quay, Model Registry, S3) for the evaluation pipeline.">
     <meta name="generator" content="Antora 3.1.3">
     <link rel="stylesheet" href="../../../_/css/site.css">
@@ -53,27 +53,14 @@
   <li class="nav-item is-current-page" data-depth="2">
     <a class="nav-link" href="infrastructure-setup.html">Infrastructure setup</a>
   </li>
-</ul>
-  </li>
-</ul>
-  </li>
-  <li class="nav-item" data-depth="0">
-<ul class="nav-list">
-  <li class="nav-item" data-depth="1">
-    <button class="nav-item-toggle"></button>
-    <a class="nav-link" href="../chapter2/index.html">Model Deployment</a>
-<ul class="nav-list">
   <li class="nav-item" data-depth="2">
-    <a class="nav-link" href="../chapter2/deployment-overview.html">Deployment Overview</a>
+    <a class="nav-link" href="modelcar-pipeline.html">ModelCar Pipeline Deployment</a>
   </li>
   <li class="nav-item" data-depth="2">
-    <a class="nav-link" href="#infrastructure-setup.adoc">Infrastructure Setup</a>
+    <a class="nav-link" href="evaluation-pipeline.html">Evaluation Pipeline Deployment</a>
   </li>
   <li class="nav-item" data-depth="2">
-    <a class="nav-link" href="../chapter2/modelcar-pipeline.html">ModelCar Pipeline Deployment</a>
-  </li>
-  <li class="nav-item" data-depth="2">
-    <a class="nav-link" href="../chapter2/evaluation-pipeline.html">Evaluation Pipeline Deployment</a>
+    <a class="nav-link" href="results-analysis.html">Results Analysis and Visualization</a>
   </li>
 </ul>
   </li>
@@ -221,7 +208,7 @@ oc apply -f deploy/model-registry/mysql-service.yaml</code></pre>
 <td class="content">
 <div class="title">Security Notice</div>
 <div class="paragraph">
-<p>The default <code>mysql-secret.yaml</code> uses generic passwords (<code>mysql123</code>). For a production deployment, please rotate these credentials immediately.</p>
+<p>The default <code>mysql-secret.yaml</code> uses generic passwords (<code>mysql-admin</code>). For a production deployment, please rotate these credentials immediately.</p>
 </div>
 </td>
 </tr>
@@ -297,7 +284,7 @@ oc get route -n s3-storage | grep s3-ui</code></pre>
 <td class="content">
 <div class="title">Security Notice</div>
 <div class="paragraph">
-<p>The default <code>minio-backend.yaml</code> uses generic passwords (<code>xxxx123</code>). For a production deployment, please rotate these credentials immediately.</p>
+<p>The default <code>minio-backend.yaml</code> uses generic passwords (<code>minio123</code>). For a production deployment, please rotate these credentials immediately.</p>
 </div>
 </td>
 </tr>
@@ -330,18 +317,25 @@ oc get route -n s3-storage | grep s3-ui</code></pre>
 <div class="paragraph">
 <p>We use Quay to store our ModelCar images. If you don&#8217;t have a corporate Quay instance, we will deploy a lightweight standalone version.</p>
 </div>
-<div class="sect2">
-<h3 id="_update_the_quayquay_config_secret_rados_hostname_with_the_minio_api_route"><a class="anchor" href="#_update_the_quayquay_config_secret_rados_hostname_with_the_minio_api_route"></a>Update the quay/quay-config-secret-rados hostname with the Minio API route.</h3>
-<div class="paragraph">
-<p>Get the Minio API route:</p>
-</div>
-<div class="listingblock">
+<div class="olist arabic">
+<ol class="arabic">
+<li>
+<p>Update the <code>deploy/quay/quay-config-secret-rados.yaml</code> hostname with the Minio API route.</p>
+<div class="literalblock">
 <div class="content">
-<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash"> oc get route -n s3-storage | grep minio-api</code></pre>
+<pre>Get the Minio API route:
+[source,bash]
+----
+ oc get route -n s3-storage | grep minio-api
+----</pre>
 </div>
 </div>
-<div class="sect3">
-<h4 id="_replace_the_replace_me_with_minio_api_route_with_the_minio_api_route_from_the_previous_step_no_need_to_add_httphttps_or_the_port_for_example_your_hostname_should_look_similar_to_minio_api_s3_storage_apps_cluster_11111_22222_com"><a class="anchor" href="#_replace_the_replace_me_with_minio_api_route_with_the_minio_api_route_from_the_previous_step_no_need_to_add_httphttps_or_the_port_for_example_your_hostname_should_look_similar_to_minio_api_s3_storage_apps_cluster_11111_22222_com"></a>Replace the &lt;REPLACE_ME_WITH_MINIO_API_ROUTE&gt; with the Minio API route from the previous step. No need to add http/https or the port. For example, your hostname should look similar to: minio-api-s3-storage.apps.cluster-11111.22222.com</h4>
+</li>
+<li>
+<p>Replace the <strong>&lt;REPLACE_ME_WITH_MINIO_API_ROUTE&gt;</strong> with the Minio API route from the previous step. No need to add http/https or the port. For example, your hostname should look similar to: <strong>minio-api-s3-storage.apps.cluster-11111.22222.com</strong></p>
+</li>
+</ol>
+</div>
 <div class="listingblock">
 <div class="content">
 <pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">apiVersion: v1
@@ -357,7 +351,7 @@ stringData:
         - access_key: 'minio'
           secret_key: 'minio123'
           bucket_name: 'quay-registry-bucket'
-          hostname: *'&lt;REPLACE_ME_WITH_MINIO_API_ROUTE&gt;'*
+          hostname: '&lt;REPLACE_ME_WITH_MINIO_API_ROUTE&gt;'
           is_secure: true
           #port: '9000'
           storage_path: /datastorage/registry
@@ -369,8 +363,6 @@ stringData:
       - default</code></pre>
 </div>
 </div>
-</div>
-</div>
 <div class="sect2">
 <h3 id="_install_operator_instance"><a class="anchor" href="#_install_operator_instance"></a>Install Operator &amp; Instance</h3>
 <div class="listingblock">
@@ -378,7 +370,7 @@ stringData:
 <pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash"># 1. Create Namespace &amp; Install Operator
 oc new-project quay-registry
 oc apply -f deploy/quay/operator-group.yaml -n quay-registry
-oc apply -f quay/quay-config-secret-rados.yaml -n quay-registry
+oc apply -f deploy/quay/quay-config-secret-rados.yaml -n quay-registry
 oc apply -f deploy/quay/subscription.yaml -n quay-registry
 
 # 2. Wait for Operator (approx 30s)
@@ -407,13 +399,13 @@ oc apply -f deploy/quay/quay-registry.yaml -n quay-registry</code></pre>
 <div class="olist loweralpha">
 <ol class="loweralpha" type="a">
 <li>
-<p>username:  admin</p>
+<p>username: <code>admin</code></p>
 </li>
 <li>
-<p>email address: <a href="mailto:admin@admin.com">admin@admin.com</a></p>
+<p>email address: <code>admin@admin.com</code></p>
 </li>
 <li>
-<p>admin123</p>
+<p>password: <code>admin123</code></p>
 </li>
 </ol>
 </div>
@@ -453,7 +445,7 @@ oc get pods -n s3-storage -l app=minio</code></pre>
 </div>
 <nav class="pagination">
   <span class="prev"><a href="index.html">Platform preparation</a></span>
-  <span class="next"><a href="../chapter2/index.html">Model Deployment</a></span>
+  <span class="next"><a href="modelcar-pipeline.html">ModelCar Pipeline Deployment</a></span>
 </nav>
 </article>
   </div>

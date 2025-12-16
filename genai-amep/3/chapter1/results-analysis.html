@@ -1,0 +1,834 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>Results Analysis and Visualization :: Automated Multi Language LLM Evaluation Pipeline</title>
+    <link rel="prev" href="evaluation-pipeline.html">
+    <meta name="description" content="Using RHOAI Workbenches and Jupyter Notebooks to visualize and analyze evaluation results.">
+    <meta name="generator" content="Antora 3.1.3">
+    <link rel="stylesheet" href="../../../_/css/site.css">
+    <script>var uiRootPath = '../../../_'</script>
+  </head>
+  <body class="article data-scientist,platform-engineer">
+<header class="header">
+  <nav class="navbar">
+    <div class="navbar-brand">
+      <a class="navbar-item" href="https://www.redhat.com" target="_blank"><img src="../../../_/img/redhat-logo.png" height="40px" alt="Red Hat"></a>
+      <a class="navbar-item" style="font-size: 24px; color: white" href="../../..">Automated Multi Language LLM Evaluation Pipeline</a>
+      <button class="navbar-burger" data-target="topbar-nav">
+        <span></span>
+        <span></span>
+        <span></span>
+      </button>
+    </div>
+    <div id="topbar-nav" class="navbar-menu">
+      <div class="navbar-end">
+        <a class="navbar-item" href="https://github.com/RedHatQuickCourses/changeme/issues" target="_blank">Report Issues</a>
+      </div>
+    </div>
+  </nav>
+</header><div class="body">
+<div class="nav-container" data-component="genai-amep" data-version="3">
+  <aside class="nav">
+    <div class="panels">
+<div class="nav-panel-menu is-active" data-panel="menu">
+  <nav class="nav-menu">
+    <h3 class="title"><a href="../index.html">Automated Multi-Language LLM Evaluation Pipeline</a></h3>
+<ul class="nav-list">
+  <li class="nav-item" data-depth="0">
+<ul class="nav-list">
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../index.html">Introduction</a>
+  </li>
+</ul>
+  </li>
+  <li class="nav-item" data-depth="0">
+<ul class="nav-list">
+  <li class="nav-item" data-depth="1">
+    <button class="nav-item-toggle"></button>
+    <a class="nav-link" href="index.html">Platform preparation</a>
+<ul class="nav-list">
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="infrastructure-setup.html">Infrastructure setup</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="modelcar-pipeline.html">ModelCar Pipeline Deployment</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="evaluation-pipeline.html">Evaluation Pipeline Deployment</a>
+  </li>
+  <li class="nav-item is-current-page" data-depth="2">
+    <a class="nav-link" href="results-analysis.html">Results Analysis and Visualization</a>
+  </li>
+</ul>
+  </li>
+</ul>
+  </li>
+</ul>
+  </nav>
+</div>
+<div class="nav-panel-explore" data-panel="explore">
+  <div class="context">
+    <span class="title">Automated Multi-Language LLM Evaluation Pipeline</span>
+    <span class="version">3</span>
+  </div>
+  <ul class="components">
+    <li class="component is-current">
+      <a class="title" href="../index.html">Automated Multi-Language LLM Evaluation Pipeline</a>
+      <ul class="versions">
+        <li class="version is-current is-latest">
+          <a href="../index.html">3</a>
+        </li>
+      </ul>
+    </li>
+  </ul>
+</div>
+    </div>
+  </aside>
+</div>
+<main class="article">
+<div class="toolbar" role="navigation">
+<button class="nav-toggle"></button>
+  <a href="../index.html" class="home-link"></a>
+<nav class="breadcrumbs" aria-label="breadcrumbs">
+  <ul>
+    <li><a href="../index.html">Automated Multi-Language LLM Evaluation Pipeline</a></li>
+    <li><a href="index.html">Platform preparation</a></li>
+    <li><a href="results-analysis.html">Results Analysis and Visualization</a></li>
+  </ul>
+</nav>
+</div>
+  <div class="content">
+<aside class="toc sidebar" data-title="Contents" data-levels="2">
+  <div class="toc-menu"></div>
+</aside>
+<article class="doc">
+<h1 class="page">Results Analysis and Visualization</h1>
+<div id="preamble">
+<div class="sectionbody">
+<div class="paragraph lead">
+<p>After running evaluations, you need to make sense of the data. This guide shows you how to use RHOAI Workbenches and Jupyter Notebooks to visualize, analyze, and report on your model evaluation results.</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_prerequisites"><a class="anchor" href="#_prerequisites"></a>Prerequisites</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>Before starting, ensure you have:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p><a href="infrastructure-setup.html" class="xref page">Infrastructure Setup</a> completed</p>
+</li>
+<li>
+<p>Evaluation results available (either from <a href="modelcar-pipeline.html" class="xref page">ModelCar Pipeline</a> or <a href="evaluation-pipeline.html" class="xref page">Evaluation Pipeline</a>)</p>
+</li>
+<li>
+<p>Access to RHOAI Workbenches with Jupyter Notebook support</p>
+</li>
+<li>
+<p>Results stored in S3 (MinIO) or accessible via PVC</p>
+</li>
+</ul>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_overview"><a class="anchor" href="#_overview"></a>Overview</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>The AMEP solution provides two Jupyter Notebooks for results analysis:</p>
+</div>
+<div class="olist arabic">
+<ol class="arabic">
+<li>
+<p><strong>HumanEval Analysis</strong> (<code>humaneval.ipynb</code>): Interactive evaluation of code generation capabilities</p>
+</li>
+<li>
+<p><strong>Multi-Language Evaluation Analysis</strong> (<code>multilang_evaluation_analysis.ipynb</code>): Comprehensive visualization and comparison of model performance across languages</p>
+</li>
+</ol>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_setting_up_rhoai_workbench"><a class="anchor" href="#_setting_up_rhoai_workbench"></a>Setting Up RHOAI Workbench</h2>
+<div class="sectionbody">
+<div class="sect2">
+<h3 id="_create_a_workbench_instance"><a class="anchor" href="#_create_a_workbench_instance"></a>Create a Workbench Instance</h3>
+<div class="olist arabic">
+<ol class="arabic">
+<li>
+<p>Navigate to <strong>OpenShift AI Dashboard</strong> → <strong>Workbenches</strong></p>
+</li>
+<li>
+<p>Click <strong>Create workbench</strong></p>
+</li>
+<li>
+<p>Configure the workbench:</p>
+<div class="ulist">
+<ul>
+<li>
+<p><strong>Name</strong>: <code>evaluation-analysis</code></p>
+</li>
+<li>
+<p><strong>Image</strong>: Select a Python-based image (e.g., <code>Standard Data Science</code> or <code>PyTorch</code>)</p>
+</li>
+<li>
+<p><strong>Container size</strong>: Medium or Large (depending on your data size)</p>
+</li>
+<li>
+<p><strong>Storage</strong>: Attach a PVC if you need to access evaluation results from a shared volume</p>
+</li>
+</ul>
+</div>
+</li>
+</ol>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_access_the_notebook_environment"><a class="anchor" href="#_access_the_notebook_environment"></a>Access the Notebook Environment</h3>
+<div class="olist arabic">
+<ol class="arabic">
+<li>
+<p>Once the workbench is running, click <strong>Open</strong> to launch JupyterLab</p>
+</li>
+<li>
+<p>In JupyterLab, open a terminal and clone the repository:</p>
+</li>
+</ol>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">cd ~
+git clone https://github.com/RedHatQuickCourses/genai-amep.git
+cd genai-amep/deploy/notebooks</code></pre>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_humaneval_analysis_notebook"><a class="anchor" href="#_humaneval_analysis_notebook"></a>HumanEval Analysis Notebook</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>The HumanEval notebook provides an interactive way to evaluate code generation capabilities of your deployed models.</p>
+</div>
+<div class="sect2">
+<h3 id="_running_humaneval_evaluation"><a class="anchor" href="#_running_humaneval_evaluation"></a>Running HumanEval Evaluation</h3>
+<div class="olist arabic">
+<ol class="arabic">
+<li>
+<p>Open <code>humaneval.ipynb</code> in JupyterLab</p>
+</li>
+<li>
+<p>The notebook contains the following sections:</p>
+</li>
+</ol>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_launch_vllm_server_optional"><a class="anchor" href="#_launch_vllm_server_optional"></a>Launch vLLM Server (Optional)</h3>
+<div class="paragraph">
+<p>If you need to run a local vLLM server for testing:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-python hljs" data-lang="python">import subprocess
+
+# Define your vLLM launch command
+vllm_command = [
+    "python",
+    "-m", "vllm.entrypoints.openai.api_server",
+    "--model", "RedHatAI/Meta-Llama-3.1-8B-Instruct-quantized.w4a16",
+    "--port", "8000",
+    "--max-model-len", "5000",
+    "--dtype", "float16"
+]
+
+# Run it in the background
+vllm_process = subprocess.Popen(vllm_command)
+print("✅ vLLM server started on http://localhost:8000")</code></pre>
+</div>
+</div>
+<div class="admonitionblock note">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-note" title="Note"></i>
+</td>
+<td class="content">
+<div class="paragraph">
+<p>If you&#8217;re evaluating a model already deployed via InferenceService, skip this step and point the client to your deployed endpoint.</p>
+</div>
+</td>
+</tr>
+</table>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_connect_to_model_endpoint"><a class="anchor" href="#_connect_to_model_endpoint"></a>Connect to Model Endpoint</h3>
+<div class="paragraph">
+<p>Configure the OpenAI client to connect to your model:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-python hljs" data-lang="python">from openai import OpenAI
+
+# For local vLLM server
+client = OpenAI(base_url="http://localhost:8000/v1", api_key="EMPTY")
+
+# For deployed InferenceService
+# client = OpenAI(
+#     base_url="http://&lt;MODEL_NAME&gt;-predictor.&lt;NAMESPACE&gt;.svc.cluster.local:8080/v1",
+#     api_key="EMPTY"
+# )</code></pre>
+</div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_run_humaneval_evaluation"><a class="anchor" href="#_run_humaneval_evaluation"></a>Run HumanEval Evaluation</h3>
+<div class="paragraph">
+<p>The notebook will:</p>
+</div>
+<div class="olist arabic">
+<ol class="arabic">
+<li>
+<p>Clone the HumanEval repository</p>
+</li>
+<li>
+<p>Install dependencies</p>
+</li>
+<li>
+<p>Iterate through all 164 HumanEval problems</p>
+</li>
+<li>
+<p>Test each generated solution for correctness</p>
+</li>
+<li>
+<p>Display real-time pass@1 metrics</p>
+</li>
+</ol>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-python hljs" data-lang="python">import json
+from human_eval.data import read_problems
+from human_eval.execution import check_correctness
+
+# Load HumanEval prompts
+problems = read_problems()
+
+results = []
+for idx, (task_id, task) in enumerate(problems.items(), start=1):
+    prompt = task["prompt"].lstrip()
+
+    response = client.completions.create(
+        model="your-model-name",
+        prompt=prompt,
+        max_tokens=512,
+        temperature=0.0,
+        top_p=1.0,
+        stop=["\nclass", "\ndef", "\n#"]
+    )
+
+    completion = response.choices[0].text
+    result = check_correctness(problem=task, completion=completion, timeout=3)
+
+    results.append({
+        "task_id": task_id,
+        "passed": result["passed"],
+        "result": result["result"]
+    })
+
+    # Display progress
+    pass_count = sum(r["passed"] for r in results)
+    running_pass_rate = pass_count / idx
+    print(f"{task_id}: {'✅' if result['passed'] else '❌'} | "
+          f"running pass@1: {running_pass_rate:.3f} ({pass_count}/{idx})")
+
+# Final summary
+total = len(results)
+final_pass_rate = pass_count / total
+print(f"\nFinal Pass@1: {final_pass_rate:.3f} ({pass_count}/{total})")</code></pre>
+</div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_export_results"><a class="anchor" href="#_export_results"></a>Export Results</h3>
+<div class="paragraph">
+<p>Save the evaluation results for later analysis:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-python hljs" data-lang="python"># Save results to JSON
+with open('humaneval_results.json', 'w') as f:
+    json.dump(results, f, indent=2)
+
+# Or upload to S3
+import boto3
+s3 = boto3.client('s3',
+    endpoint_url='http://minio-service.s3-storage.svc.cluster.local:9000',
+    aws_access_key_id='minio',
+    aws_secret_access_key='minio123'
+)
+s3.upload_file('humaneval_results.json', 'benchmark-results',
+               'humaneval_results.json')</code></pre>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_multi_language_evaluation_analysis"><a class="anchor" href="#_multi_language_evaluation_analysis"></a>Multi-Language Evaluation Analysis</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>The multi-language evaluation analysis notebook provides comprehensive visualization and comparison capabilities for evaluation results across multiple languages.</p>
+</div>
+<div class="sect2">
+<h3 id="_loading_evaluation_results"><a class="anchor" href="#_loading_evaluation_results"></a>Loading Evaluation Results</h3>
+<div class="paragraph">
+<p>The notebook supports loading results from two sources:</p>
+</div>
+<div class="sect3">
+<h4 id="_local_storage_pvc"><a class="anchor" href="#_local_storage_pvc"></a>Local Storage (PVC)</h4>
+<div class="paragraph">
+<p>If results are stored in a shared PVC:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-python hljs" data-lang="python"># Configuration
+DATA_SOURCE = 'local'
+LOCAL_RESULTS_DIR = Path("/workspace/shared-workspace/multilang_evaluation_results")
+
+# Load results
+evaluation_results = load_local_results(LOCAL_RESULTS_DIR)</code></pre>
+</div>
+</div>
+</div>
+<div class="sect3">
+<h4 id="_s3_storage_minio"><a class="anchor" href="#_s3_storage_minio"></a>S3 Storage (MinIO)</h4>
+<div class="paragraph">
+<p>If results are stored in S3:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-python hljs" data-lang="python"># Configuration
+DATA_SOURCE = 's3'
+S3_CONFIG = {
+    'bucket': 'llm-evaluation-results',
+    'endpoint_url': 'http://minio-service.s3-storage.svc.cluster.local:9000',
+    'access_key': os.environ.get('AWS_ACCESS_KEY_ID', 'minio'),
+    'secret_key': os.environ.get('AWS_SECRET_ACCESS_KEY', 'minio123'),
+}
+
+# Load results
+s3_prefix = "evaluations/model_name/version/timestamp"
+evaluation_results = load_s3_results(s3_prefix, S3_CONFIG)</code></pre>
+</div>
+</div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_visualizations"><a class="anchor" href="#_visualizations"></a>Visualizations</h3>
+<div class="paragraph">
+<p>The notebook generates several types of visualizations:</p>
+</div>
+<div class="sect3">
+<h4 id="_performance_comparison_chart"><a class="anchor" href="#_performance_comparison_chart"></a>Performance Comparison Chart</h4>
+<div class="paragraph">
+<p>Compare model performance across languages using an interactive bar chart:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-python hljs" data-lang="python">import plotly.express as px
+
+# Filter for accuracy metrics
+df_accuracy = df_metrics[
+    df_metrics['metric'].str.contains('acc|f1|em', case=False, na=False)
+]
+
+# Create bar chart
+fig = px.bar(
+    df_accuracy,
+    x='task',
+    y='value',
+    color='language_name',
+    barmode='group',
+    title='Model Performance Comparison Across Languages',
+    labels={'value': 'Score', 'task': 'Benchmark Task'},
+    height=500
+)
+fig.show()</code></pre>
+</div>
+</div>
+</div>
+<div class="sect3">
+<h4 id="_performance_heatmap"><a class="anchor" href="#_performance_heatmap"></a>Performance Heatmap</h4>
+<div class="paragraph">
+<p>Visualize performance across all tasks and languages:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-python hljs" data-lang="python">import seaborn as sns
+import matplotlib.pyplot as plt
+
+# Aggregate metrics
+heatmap_data = df_accuracy.groupby(['task', 'language_name'])['value'].mean().unstack()
+
+# Create heatmap
+plt.figure(figsize=(10, 6))
+sns.heatmap(
+    heatmap_data,
+    annot=True,
+    fmt='.3f',
+    cmap='RdYlGn',
+    cbar_kws={'label': 'Score'},
+    vmin=0,
+    vmax=1
+)
+plt.title('Performance Heatmap: Tasks vs Languages', fontsize=14)
+plt.tight_layout()
+plt.show()</code></pre>
+</div>
+</div>
+</div>
+<div class="sect3">
+<h4 id="_performance_gap_analysis"><a class="anchor" href="#_performance_gap_analysis"></a>Performance Gap Analysis</h4>
+<div class="paragraph">
+<p>Analyze performance gaps relative to a baseline language (typically English):</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-python hljs" data-lang="python"># Calculate performance gap relative to English
+if 'English' in heatmap_data.columns:
+    performance_gaps = pd.DataFrame()
+
+    for lang in heatmap_data.columns:
+        if lang != 'English':
+            gaps = (heatmap_data[lang] - heatmap_data['English']) / heatmap_data['English'] * 100
+            performance_gaps[lang] = gaps
+
+    # Plot performance gaps
+    performance_gaps.plot(kind='bar', figsize=(10, 6))
+    plt.title('Performance Gap Relative to English (%)')
+    plt.xlabel('Benchmark Task')
+    plt.ylabel('Performance Gap (%)')
+    plt.xticks(rotation=45, ha='right')
+    plt.tight_layout()
+    plt.show()
+
+    # Display average gaps
+    avg_gaps = performance_gaps.mean()
+    for lang, gap in avg_gaps.items():
+        print(f"{lang}: {gap:+.2f}%")</code></pre>
+</div>
+</div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_generating_reports"><a class="anchor" href="#_generating_reports"></a>Generating Reports</h3>
+<div class="paragraph">
+<p>The notebook can generate comprehensive markdown reports:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-python hljs" data-lang="python"># Generate markdown report
+report = []
+report.append("# Multi-Language LLM Evaluation Report\n")
+report.append(f"**Generated**: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
+
+# Add model information
+if evaluation_results['summary']:
+    summary = evaluation_results['summary']
+    report.append("## Model Information\n")
+    report.append(f"- **Model**: {summary.get('model_name', 'Unknown')}\n")
+    report.append(f"- **Version**: {summary.get('model_version', 'Unknown')}\n")
+    report.append(f"- **Evaluation Date**: {summary.get('timestamp', 'Unknown')}\n")
+
+# Add performance summary
+report.append("\n## Performance Summary\n")
+report.append(f"\n{pivot_table.to_markdown()}\n")
+
+# Save report
+report_file = Path("multilang_evaluation_report.md")
+with open(report_file, 'w') as f:
+    f.writelines(report)
+
+print(f"✅ Report saved to: {report_file}")</code></pre>
+</div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_exporting_results"><a class="anchor" href="#_exporting_results"></a>Exporting Results</h3>
+<div class="paragraph">
+<p>Export analysis results in multiple formats:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-python hljs" data-lang="python"># Export to CSV
+pivot_table.to_csv("multilang_evaluation_summary.csv")
+
+# Export to JSON
+with open("evaluation_analysis.json", 'w') as f:
+    json.dump({
+        'summary': evaluation_results['summary'],
+        'metrics': df_metrics.to_dict('records'),
+        'heatmap_data': heatmap_data.to_dict()
+    }, f, indent=2)
+
+# Upload to S3
+s3.upload_file("multilang_evaluation_summary.csv",
+               'benchmark-results',
+               'analysis/multilang_summary.csv')</code></pre>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_comparing_multiple_evaluation_runs"><a class="anchor" href="#_comparing_multiple_evaluation_runs"></a>Comparing Multiple Evaluation Runs</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>To compare results across multiple model versions or evaluation runs:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-python hljs" data-lang="python"># Load multiple evaluation runs
+evaluation_dirs = [
+    Path("/workspace/shared-workspace/multilang_evaluation_results_v1"),
+    Path("/workspace/shared-workspace/multilang_evaluation_results_v2"),
+]
+
+all_results = {}
+for eval_dir in evaluation_dirs:
+    version = eval_dir.name.split('_')[-1]
+    all_results[version] = load_local_results(eval_dir)
+
+# Create comparison DataFrame
+comparison_data = []
+for version, results in all_results.items():
+    df = extract_metrics(results)
+    df['version'] = version
+    comparison_data.append(df)
+
+df_comparison = pd.concat(comparison_data, ignore_index=True)
+
+# Visualize comparison
+fig = px.bar(
+    df_comparison,
+    x='task',
+    y='value',
+    color='version',
+    facet_col='language_name',
+    title='Model Performance Comparison Across Versions',
+    height=600
+)
+fig.show()</code></pre>
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_accessing_results_from_s3"><a class="anchor" href="#_accessing_results_from_s3"></a>Accessing Results from S3</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>If your evaluation results are stored in S3 (MinIO), you can access them directly:</p>
+</div>
+<div class="sect2">
+<h3 id="_configure_s3_access"><a class="anchor" href="#_configure_s3_access"></a>Configure S3 Access</h3>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-python hljs" data-lang="python">import boto3
+from botocore.client import Config
+
+# Configure S3 client for MinIO
+s3_client = boto3.client(
+    's3',
+    endpoint_url='http://minio-service.s3-storage.svc.cluster.local:9000',
+    aws_access_key_id='minio',
+    aws_secret_access_key='minio123',
+    config=Config(signature_version='s3v4'),
+    use_ssl=False
+)
+
+# List available evaluation results
+bucket = 'benchmark-results'
+prefix = 'evaluations/'
+response = s3_client.list_objects_v2(Bucket=bucket, Prefix=prefix)
+
+for obj in response.get('Contents', []):
+    print(f"  {obj['Key']} ({obj['Size']} bytes)")</code></pre>
+</div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_download_results"><a class="anchor" href="#_download_results"></a>Download Results</h3>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-python hljs" data-lang="python"># Download specific evaluation results
+s3_key = "evaluations/granite-2b/1.0.0/20240101_120000/en/results.json"
+local_path = "/tmp/evaluation_results.json"
+
+s3_client.download_file(bucket, s3_key, local_path)
+
+# Load and analyze
+with open(local_path) as f:
+    results = json.load(f)</code></pre>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_best_practices"><a class="anchor" href="#_best_practices"></a>Best Practices</h2>
+<div class="sectionbody">
+<div class="sect2">
+<h3 id="_organizing_results"><a class="anchor" href="#_organizing_results"></a>Organizing Results</h3>
+<div class="ulist">
+<ul>
+<li>
+<p>Use consistent naming conventions for evaluation runs</p>
+</li>
+<li>
+<p>Include timestamps in directory/file names</p>
+</li>
+<li>
+<p>Store metadata (model name, version, date) with results</p>
+</li>
+<li>
+<p>Keep raw results separate from processed/aggregated data</p>
+</li>
+</ul>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_visualization_guidelines"><a class="anchor" href="#_visualization_guidelines"></a>Visualization Guidelines</h3>
+<div class="ulist">
+<ul>
+<li>
+<p>Use consistent color schemes across visualizations</p>
+</li>
+<li>
+<p>Include clear axis labels and legends</p>
+</li>
+<li>
+<p>Add context (model name, version, date) to all charts</p>
+</li>
+<li>
+<p>Export high-resolution images for reports</p>
+</li>
+</ul>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_performance_considerations"><a class="anchor" href="#_performance_considerations"></a>Performance Considerations</h3>
+<div class="ulist">
+<ul>
+<li>
+<p>For large datasets, consider sampling or aggregation</p>
+</li>
+<li>
+<p>Cache intermediate results to speed up re-analysis</p>
+</li>
+<li>
+<p>Use appropriate data types (e.g., float32 vs float64)</p>
+</li>
+<li>
+<p>Profile notebook execution to identify bottlenecks</p>
+</li>
+</ul>
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_troubleshooting"><a class="anchor" href="#_troubleshooting"></a>Troubleshooting</h2>
+<div class="sectionbody">
+<div class="sect2">
+<h3 id="_notebook_fails_to_load_results"><a class="anchor" href="#_notebook_fails_to_load_results"></a>Notebook Fails to Load Results</h3>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash"># Verify file paths
+ls -la /workspace/shared-workspace/multilang_evaluation_results/
+
+# Check file permissions
+chmod -R 755 /workspace/shared-workspace/
+
+# Verify JSON format
+python -m json.tool /path/to/results.json</code></pre>
+</div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_s3_connection_issues"><a class="anchor" href="#_s3_connection_issues"></a>S3 Connection Issues</h3>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-python hljs" data-lang="python"># Test S3 connectivity
+try:
+    s3_client.list_buckets()
+    print("✅ S3 connection successful")
+except Exception as e:
+    print(f"❌ S3 connection failed: {e}")
+    print("Check:")
+    print("  - MinIO service is running")
+    print("  - Endpoint URL is correct")
+    print("  - Credentials are valid")
+    print("  - Network connectivity from workbench to MinIO")</code></pre>
+</div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_missing_dependencies"><a class="anchor" href="#_missing_dependencies"></a>Missing Dependencies</h3>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash"># Install required packages
+pip install pandas matplotlib seaborn plotly boto3
+
+# Or use the notebook's installation cell
+!pip install -q pandas matplotlib seaborn plotly boto3</code></pre>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_next_steps"><a class="anchor" href="#_next_steps"></a>Next Steps</h2>
+<div class="sectionbody">
+<div class="ulist">
+<ul>
+<li>
+<p><a href="modelcar-pipeline.html" class="xref page">Package and Deploy Models</a> - Create new model versions to evaluate</p>
+</li>
+<li>
+<p><a href="evaluation-pipeline.html" class="xref page">Run Evaluations</a> - Generate new evaluation results</p>
+</li>
+<li>
+<p>Integrate analysis notebooks into CI/CD workflows</p>
+</li>
+<li>
+<p>Create custom visualizations for domain-specific metrics</p>
+</li>
+<li>
+<p>Set up automated report generation</p>
+</li>
+</ul>
+</div>
+</div>
+</div>
+<nav class="pagination">
+  <span class="prev"><a href="evaluation-pipeline.html">Evaluation Pipeline Deployment</a></span>
+</nav>
+</article>
+  </div>
+</main>
+</div>
+<footer class="footer">
+  <img src="../../../_/img/rhl-logo-red.png" height="40px" alt="Red Hat"  href="https://redhat.com" >
+</footer><script id="site-script" src="../../../_/js/site.js" data-ui-root-path="../../../_"></script>
+<script async src="../../../_/js/vendor/highlight.js"></script>
+  </body>
+</html>
