@@ -3,8 +3,10 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width,initial-scale=1">
-    <title>Automated Multi-Language LLM Evaluation Pipeline :: Automated Multi Language LLM Evaluation Pipeline</title>
+    <title>Automated Multilingual Evaluation Pipeline (AMEP) :: Automated Multi Language LLM Evaluation Pipeline</title>
     <link rel="next" href="chapter1/index.html">
+    <meta name="description" content="A modular framework for evaluating LLMs on OpenShift AI 3.0.">
+    <meta name="keywords" content="openshift ai, rhoai, llm, evaluation, trustyai, model registry, vllm">
     <meta name="generator" content="Antora 3.1.3">
     <link rel="stylesheet" href="../../_/css/site.css">
     <script>var uiRootPath = '../../_'</script>
@@ -46,22 +48,10 @@
 <ul class="nav-list">
   <li class="nav-item" data-depth="1">
     <button class="nav-item-toggle"></button>
-    <a class="nav-link" href="chapter1/index.html">Model Preparation</a>
+    <a class="nav-link" href="chapter1/index.html">Platform Preparation</a>
 <ul class="nav-list">
   <li class="nav-item" data-depth="2">
-    <a class="nav-link" href="chapter1/architecture.html">Downloading Models from HuggingFace</a>
-  </li>
-  <li class="nav-item" data-depth="2">
-    <a class="nav-link" href="chapter1/multilang-evaluation.html">Model Compression</a>
-  </li>
-  <li class="nav-item" data-depth="2">
-    <span class="nav-text">xref:section1.adoc</span>
-  </li>
-  <li class="nav-item" data-depth="2">
-    <span class="nav-text">xref:section2.adoc</span>
-  </li>
-  <li class="nav-item" data-depth="2">
-    <span class="nav-text">xref:section3.adoc</span>
+    <span class="nav-text">xref:instrastructure-setup.adoc</span>
   </li>
 </ul>
   </li>
@@ -77,7 +67,7 @@
     <a class="nav-link" href="chapter2/deployment-overview.html">Deployment Overview</a>
   </li>
   <li class="nav-item" data-depth="2">
-    <a class="nav-link" href="chapter2/infrastructure-setup.html">Infrastructure Setup</a>
+    <a class="nav-link" href="#infrastructure-setup.adoc">Infrastructure Setup</a>
   </li>
   <li class="nav-item" data-depth="2">
     <a class="nav-link" href="chapter2/modelcar-pipeline.html">ModelCar Pipeline Deployment</a>
@@ -127,210 +117,185 @@
   <div class="toc-menu"></div>
 </aside>
 <article class="doc">
-<h1 class="page">Automated Multi-Language LLM Evaluation Pipeline</h1>
-<div class="sect1">
-<h2 id="_overview"><a class="anchor" href="#_overview"></a>Overview</h2>
+<h1 class="page">Automated Multilingual Evaluation Pipeline (AMEP)</h1>
+<div id="preamble">
 <div class="sectionbody">
-<div class="paragraph">
-<p>This guide documents an automated pipeline for evaluating Large Language Models (LLMs) across multiple languages using Red Hat OpenShift AI as the platform.</p>
-</div>
-<div class="paragraph">
-<p><strong>Original solution developed by</strong>: Red Hat AI Customer Adoption and Innovation team (CAI) and can be found here:  <a href="https://github.com/rh-aiservices-bu/model-car-importer.git" target="blank">model-car-importer repository</a></p>
+<div class="paragraph lead">
+<p>A deployable, modular solution framework for Platform Engineers to package, deploy, and evaluate Large Language Models (LLMs) on Red Hat OpenShift AI 3.0.</p>
 </div>
 </div>
 </div>
 <div class="sect1">
-<h2 id="_what_this_step_by_step_pipeline_does"><a class="anchor" href="#_what_this_step_by_step_pipeline_does"></a>What This Step=-by-Step Pipeline Does</h2>
+<h2 id="_welcome"><a class="anchor" href="#_welcome"></a>👋 Welcome</h2>
 <div class="sectionbody">
 <div class="paragraph">
-<p>This automated solution provides end-to-end capabilities for:</p>
+<p>Welcome to the <strong>Automated Multilingual Evaluation Pipeline (AMEP)</strong> solution kit.</p>
 </div>
-<div class="olist arabic">
-<ol class="arabic">
-<li>
-<p><strong>Model Acquisition</strong>: Download models from HuggingFace Hub</p>
-</li>
-<li>
-<p><strong>Container Packaging</strong>: Package models in Modelcar OCI containers</p>
-</li>
-<li>
-<p><strong>Registry Management</strong>: Register models in OpenShift AI Model Registry</p>
-</li>
-<li>
-<p><strong>Model Deployment</strong>: Deploy models using vLLM runtime for inference</p>
-</li>
-<li>
-<p><strong>Multi-Language Evaluation</strong>: Test model performance across English, Spanish, and Japanese</p>
-</li>
-<li>
-<p><strong>Bias Detection</strong>: Optional TrustyAI integration for fairness testing</p>
-</li>
-<li>
-<p><strong>Results Storage</strong>: Store evaluation results in S3-compatible storage</p>
-</li>
-<li>
-<p><strong>Results Analysis</strong>: Visualize and compare results using Jupyter notebooks</p>
-</li>
-</ol>
+<div class="paragraph">
+<p>If you are a <strong>Platform Engineer</strong>, you know the struggle: your AI Developers and Data Scientists want to use the "latest and greatest" open-source models, but they need to know if those models actually work for your specific business requirements—especially when supporting multiple languages.</p>
+</div>
+<div class="paragraph">
+<p>This solution is designed to help you solve the "Paradox of Choice." It provides the architectural plumbing to turn ad-hoc model guessing into a standardized engineering process.</p>
+</div>
+<div class="admonitionblock note">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-note" title="Note"></i>
+</td>
+<td class="content">
+<div class="title">A Modular Framework</div>
+<div class="paragraph">
+<p>This solution is broken down into <strong>four distinct, manual phases</strong>. This design allows you to understand exactly how the components interact, debug easily, and reuse individual modules in your own custom workflows.</p>
+</div>
+</td>
+</tr>
+</table>
 </div>
 </div>
 </div>
 <div class="sect1">
-<h2 id="_key_features"><a class="anchor" href="#_key_features"></a>Key Features</h2>
+<h2 id="_who_is_this_for"><a class="anchor" href="#_who_is_this_for"></a>🎯 Who Is This For?</h2>
 <div class="sectionbody">
-<div class="sect2">
-<h3 id="_multi_language_support"><a class="anchor" href="#_multi_language_support"></a>Multi-Language Support</h3>
 <div class="paragraph">
-<p>Evaluate your models across three languages:</p>
+<p>We built this specifically for the people building atoken generation platform used to build Gen AI powered applications:</p>
 </div>
 <div class="ulist">
 <ul>
 <li>
-<p><strong>English (en)</strong>: Standard benchmarks including ARC-Easy, HellaSwag, WinoGrande, TruthfulQA</p>
+<p><strong>Platform Engineers (Primary):</strong> You need to provide a robust service to your Gen AI development teams. This guide shows you how to build the infrastructure for model evaluation.</p>
 </li>
 <li>
-<p><strong>Spanish (es)</strong>: BELEBELE Spanish, XNLI Spanish</p>
+<p><strong>Service Consultants:</strong> You are delivering OpenShift AI solutions to customers. Use this kit as a reference architecture or a base for your delivery engagements.</p>
 </li>
 <li>
-<p><strong>Japanese (ja)</strong>: BELEBELE Japanese, XNLI Japanese</p>
+<p><strong>Red Hat Partners:</strong> You are building integrations on top of OpenShift AI 3.0. This framework demonstrates practices for using RHOAI Model Registry, Packaging Models in ModelCar, and using TrustyAI LM_Eval integration.</p>
 </li>
 </ul>
 </div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_the_solution_framework"><a class="anchor" href="#_the_solution_framework"></a>🧩 The Solution Framework</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>The solution is divided into four sequential phases. You can run them in order to build the full pipeline, or use them independently.</p>
 </div>
 <div class="sect2">
-<h3 id="_automated_workflow"><a class="anchor" href="#_automated_workflow"></a>Automated Workflow</h3>
+<h3 id="_phase_1_package_register"><a class="anchor" href="#_phase_1_package_register"></a>Phase 1: Package &amp; Register 📦</h3>
 <div class="paragraph">
-<p>The entire pipeline is automated using Tekton on OpenShift, allowing you to:</p>
-</div>
-<div class="ulist">
-<ul>
-<li>
-<p>Run evaluations with a single command</p>
-</li>
-<li>
-<p>Skip specific steps as needed</p>
-</li>
-<li>
-<p>Track progress through the OpenShift Console</p>
-</li>
-<li>
-<p>Store and compare results over time</p>
-</li>
-</ul>
+<p><strong>"Treat Models Like Software"</strong><br>
+Stop downloading weights at runtime. We show you how to package an LLM into an OCI container image (a "ModelCar") using <code>podman</code>. You will then register this artifact in the <strong>OpenShift AI Model Registry</strong> for governance and versioning.</p>
 </div>
 </div>
 <div class="sect2">
-<h3 id="_flexible_configuration"><a class="anchor" href="#_flexible_configuration"></a>Flexible Configuration</h3>
-<div class="ulist">
-<ul>
+<h3 id="_phase_2_deploy_vllm"><a class="anchor" href="#_phase_2_deploy_vllm"></a>Phase 2: Deploy (vLLM) 🚀</h3>
+<div class="paragraph">
+<p><strong>"High-Performance Serving"</strong><br>
+Manually trigger the deployment of your registered model using <strong>vLLM</strong>, the state-of-the-art inference engine. You will configure the <code>ServingRuntime</code> and ensure GPU resources are allocated correctly.</p>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_phase_3_evaluate_trustyai"><a class="anchor" href="#_phase_3_evaluate_trustyai"></a>Phase 3: Evaluate (TrustyAI) ⚖️</h3>
+<div class="paragraph">
+<p><strong>"The Test Drive"</strong><br>
+Deploy a <strong>TrustyAI LMEval_Job</strong>—a Kubernetes Custom Resource that automatically runs standardized fluency tests against your deployed model.
+* <strong>Languages Tested:</strong> English 🇺🇸, Spanish 🇪🇸, Japanese 🇯🇵
+* <strong>Metrics:</strong> Accuracy, Fluency, and Hallucination resistance.</p>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_phase_4_visualize"><a class="anchor" href="#_phase_4_visualize"></a>Phase 4: Visualize 📊</h3>
+<div class="paragraph">
+<p><strong>"Make It Visible"</strong><br>
+Gather raw JSON data from object storage (S3) and use a Jupyter Notebook to generate a <strong>Radar Chart</strong>. This provides a clean visual artifact to show stakeholders exactly how different models compare.</p>
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_tech_stack"><a class="anchor" href="#_tech_stack"></a>🛠️ Tech Stack</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>This solution utilizes standard, cloud-native components available in OpenShift AI 3.0:</p>
+</div>
+<table class="tableblock frame-all grid-all stretch">
+<colgroup>
+<col style="width: 25%;">
+<col style="width: 75%;">
+</colgroup>
+<thead>
+<tr>
+<th class="tableblock halign-left valign-top">Component</th>
+<th class="tableblock halign-left valign-top">Role</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><strong>Model Registry</strong></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Central catalog for tracking ModelCar versions and metadata.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><strong>vLLM</strong></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">High-performance inference engine (via KServe) for serving models.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><strong>TrustyAI</strong></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Executes the <code>lm-evaluation-harness</code> to metricize performance.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><strong>S3 Storage</strong></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Stores evaluation datasets and resulting metrics (ODF/MinIO).</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><strong>Jupyter</strong></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Provides the interactive dashboard for result analysis.</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_prerequisites"><a class="anchor" href="#_prerequisites"></a>🚀 Prerequisites</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>Before starting Phase 1, ensure you have the following:</p>
+</div>
+<div class="ulist checklist">
+<ul class="checklist">
 <li>
-<p>Enable/disable specific evaluation types</p>
+<p><i class="fa fa-square-o"></i> Access to an <strong>OpenShift AI 3.0+</strong> cluster.</p>
 </li>
 <li>
-<p>Configure S3 storage for results</p>
+<p><i class="fa fa-square-o"></i> <strong>Cluster Admin</strong> privileges (required for setting up initial ServingRuntimes).</p>
 </li>
 <li>
-<p>Adjust vLLM parameters for your hardware</p>
+<p><i class="fa fa-square-o"></i> <strong>S3 Storage</strong> credentials (bucket name, endpoint, access key, secret key).</p>
 </li>
 <li>
-<p>Choose which languages to evaluate</p>
+<p><i class="fa fa-square-o"></i> A <strong>Container Registry</strong> (Quay.io or internal) to push your ModelCar images.</p>
 </li>
 </ul>
 </div>
 </div>
 </div>
-</div>
 <div class="sect1">
-<h2 id="_pipeline_components"><a class="anchor" href="#_pipeline_components"></a>Pipeline Components</h2>
+<h2 id="_lets_get_started"><a class="anchor" href="#_lets_get_started"></a>Let&#8217;s Get Started</h2>
 <div class="sectionbody">
 <div class="paragraph">
-<p>The pipeline consists of several integrated components working together:</p>
-</div>
-<div class="olist arabic">
-<ol class="arabic">
-<li>
-<p><strong>Model Download</strong>: Pulls models from HuggingFace Hub</p>
-</li>
-<li>
-<p><strong>Model Compression</strong>: Optional weight quantization for efficiency</p>
-</li>
-<li>
-<p><strong>Modelcar Packaging</strong>: Creates OCI container images with embedded models</p>
-</li>
-<li>
-<p><strong>Model Registry</strong>: Manages model versions and metadata</p>
-</li>
-<li>
-<p><strong>vLLM Deployment</strong>: Serves models with high-performance inference</p>
-</li>
-<li>
-<p><strong>Multi-Language Evaluation</strong>: Runs benchmarks across languages</p>
-</li>
-<li>
-<p><strong>TrustyAI Integration</strong>: Tests for bias and fairness (optional)</p>
-</li>
-<li>
-<p><strong>S3 Storage</strong>: Persists results for historical comparison</p>
-</li>
-<li>
-<p><strong>Jupyter Analysis</strong>: Visualizes performance across languages</p>
-</li>
-</ol>
-</div>
-</div>
-</div>
-<div class="sect1">
-<h2 id="_who_should_use_this"><a class="anchor" href="#_who_should_use_this"></a>Who Should Use This</h2>
-<div class="sectionbody">
-<div class="paragraph">
-<p>This pipeline is designed for:</p>
+<p>Ready to build the foundation?</p>
 </div>
 <div class="ulist">
 <ul>
 <li>
-<p><strong>ML Engineers</strong>: Evaluating model performance across languages</p>
-</li>
-<li>
-<p><strong>AI Platform Teams</strong>: Standardizing model evaluation workflows</p>
-</li>
-<li>
-<p><strong>Data Scientists</strong>: Comparing model variants and optimizations</p>
-</li>
-<li>
-<p><strong>Quality Assurance</strong>: Testing models for bias and fairness</p>
+<p><a href="#phase-1:index.adoc" class="xref unresolved">Start with Phase 1: Package &amp; Register</a></p>
 </li>
 </ul>
-</div>
-</div>
-</div>
-<div class="sect1">
-<h2 id="_next_steps"><a class="anchor" href="#_next_steps"></a>Next Steps</h2>
-<div class="sectionbody">
-<div class="olist arabic">
-<ol class="arabic">
-<li>
-<p>Review the <a href="#architecture.adoc" class="xref unresolved">Pipeline Architecture</a></p>
-</li>
-<li>
-<p>Check <a href="#prerequisites.adoc" class="xref unresolved">Prerequisites</a> for your environment</p>
-</li>
-<li>
-<p>Follow the <a href="chapter1/index.html" class="xref page">Model Preparation</a> guide to get started</p>
-</li>
-</ol>
-</div>
-</div>
-</div>
-<div class="sect1">
-<h2 id="_support_and_contribution"><a class="anchor" href="#_support_and_contribution"></a>Support and Contribution</h2>
-<div class="sectionbody">
-<div class="paragraph">
-<p>For issues, questions, or contributions, contact the Red Hat AI Customer Adoption and Innovation team (CAI).</p>
 </div>
 </div>
 </div>
 <nav class="pagination">
-  <span class="next"><a href="chapter1/index.html">Model Preparation</a></span>
+  <span class="next"><a href="chapter1/index.html">Platform Preparation</a></span>
 </nav>
 </article>
   </div>

@@ -1,0 +1,460 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>Infrastructure Bootstrap :: Automated Multi Language LLM Evaluation Pipeline</title>
+    <meta name="description" content="Deploying the necessary prerequisites (Quay, Model Registry, S3) for the evaluation pipeline.">
+    <meta name="generator" content="Antora 3.1.3">
+    <link rel="stylesheet" href="../../../_/css/site.css">
+    <script>var uiRootPath = '../../../_'</script>
+  </head>
+  <body class="article platform-engineer">
+<header class="header">
+  <nav class="navbar">
+    <div class="navbar-brand">
+      <a class="navbar-item" href="https://www.redhat.com" target="_blank"><img src="../../../_/img/redhat-logo.png" height="40px" alt="Red Hat"></a>
+      <a class="navbar-item" style="font-size: 24px; color: white" href="../../..">Automated Multi Language LLM Evaluation Pipeline</a>
+      <button class="navbar-burger" data-target="topbar-nav">
+        <span></span>
+        <span></span>
+        <span></span>
+      </button>
+    </div>
+    <div id="topbar-nav" class="navbar-menu">
+      <div class="navbar-end">
+        <a class="navbar-item" href="https://github.com/RedHatQuickCourses/changeme/issues" target="_blank">Report Issues</a>
+      </div>
+    </div>
+  </nav>
+</header><div class="body">
+<div class="nav-container" data-component="genai-amep" data-version="3">
+  <aside class="nav">
+    <div class="panels">
+<div class="nav-panel-menu is-active" data-panel="menu">
+  <nav class="nav-menu">
+    <h3 class="title"><a href="../index.html">Automated Multi-Language LLM Evaluation Pipeline</a></h3>
+<ul class="nav-list">
+  <li class="nav-item" data-depth="0">
+<ul class="nav-list">
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../index.html">Introduction</a>
+  </li>
+</ul>
+  </li>
+  <li class="nav-item" data-depth="0">
+<ul class="nav-list">
+  <li class="nav-item" data-depth="1">
+    <button class="nav-item-toggle"></button>
+    <a class="nav-link" href="index.html">Platform Preparation</a>
+<ul class="nav-list">
+  <li class="nav-item" data-depth="2">
+    <span class="nav-text">xref:instrastructure-setup.adoc</span>
+  </li>
+</ul>
+  </li>
+</ul>
+  </li>
+  <li class="nav-item" data-depth="0">
+<ul class="nav-list">
+  <li class="nav-item" data-depth="1">
+    <button class="nav-item-toggle"></button>
+    <a class="nav-link" href="../chapter2/index.html">Model Deployment</a>
+<ul class="nav-list">
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../chapter2/deployment-overview.html">Deployment Overview</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="#infrastructure-setup.adoc">Infrastructure Setup</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../chapter2/modelcar-pipeline.html">ModelCar Pipeline Deployment</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../chapter2/evaluation-pipeline.html">Evaluation Pipeline Deployment</a>
+  </li>
+</ul>
+  </li>
+</ul>
+  </li>
+</ul>
+  </nav>
+</div>
+<div class="nav-panel-explore" data-panel="explore">
+  <div class="context">
+    <span class="title">Automated Multi-Language LLM Evaluation Pipeline</span>
+    <span class="version">3</span>
+  </div>
+  <ul class="components">
+    <li class="component is-current">
+      <a class="title" href="../index.html">Automated Multi-Language LLM Evaluation Pipeline</a>
+      <ul class="versions">
+        <li class="version is-current is-latest">
+          <a href="../index.html">3</a>
+        </li>
+      </ul>
+    </li>
+  </ul>
+</div>
+    </div>
+  </aside>
+</div>
+<main class="article">
+<div class="toolbar" role="navigation">
+<button class="nav-toggle"></button>
+  <a href="../index.html" class="home-link"></a>
+<nav class="breadcrumbs" aria-label="breadcrumbs">
+  <ul>
+    <li><a href="../index.html">Automated Multi-Language LLM Evaluation Pipeline</a></li>
+    <li><a href="infrastructure-setup.html">Infrastructure Bootstrap</a></li>
+  </ul>
+</nav>
+</div>
+  <div class="content">
+<aside class="toc sidebar" data-title="Contents" data-levels="2">
+  <div class="toc-menu"></div>
+</aside>
+<article class="doc">
+<h1 class="page">Infrastructure Bootstrap</h1>
+<div id="preamble">
+<div class="sectionbody">
+<div class="paragraph lead">
+<p>Before we can treat models like software, we need the "Factory Floor." This section covers the automated deployment of the core infrastructure components required for the AMEP solution.</p>
+</div>
+<div class="admonitionblock note">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-note" title="Note"></i>
+</td>
+<td class="content">
+<div class="title">Existing Infrastructure?</div>
+<div class="paragraph">
+<p>If you already have access to an S3 bucket, an Image Registry (Quay), and the OpenShift AI Model Registry, you can <strong>skip this page</strong> and proceed to <a href="#phase-1:index.adoc" class="xref unresolved">Phase 1</a>.</p>
+</div>
+</td>
+</tr>
+</table>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_architecture_overview"><a class="anchor" href="#_architecture_overview"></a>🏗️ Architecture Overview</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>The "AMEP" framework relies on three pillars of infrastructure:</p>
+</div>
+<div class="olist arabic">
+<ol class="arabic">
+<li>
+<p><strong>The Warehouse (Quay):</strong> Stores our "ModelCars" (OCI Artifacts).</p>
+</li>
+<li>
+<p><strong>The Catalog (Model Registry):</strong> Tracks metadata, versions, and lineage (backed by MySQL).</p>
+</li>
+<li>
+<p><strong>The Archive (MinIO/S3):</strong> Stores the raw JSON results from our evaluations.</p>
+</li>
+</ol>
+</div>
+<div class="imageblock text-center">
+<div class="content">
+<img src="_images/infra-diagram.png" alt="Infrastructure Overview">
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_1_prerequisites"><a class="anchor" href="#_1_prerequisites"></a>1. Prerequisites</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>Ensure you have the following before running the bootstrap scripts:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p>OpenShift AI 3.0 installed.</p>
+</li>
+<li>
+<p><code>cluster-admin</code> access via the <code>oc</code> CLI.</p>
+</li>
+<li>
+<p>The <code>genai-amep</code> repository cloned locally.</p>
+</li>
+</ul>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">git clone https://github.com/RedHatQuickCourses/genai-amep.git
+cd genai-amep</code></pre>
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_2_deploy_model_registry_backend_the_catalog"><a class="anchor" href="#_2_deploy_model_registry_backend_the_catalog"></a>2. Deploy Model Registry Backend (The Catalog)</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>OpenShift AI 3.0 includes the Model Registry, but it requires a database backend. We will deploy a MySQL instance to serve this purpose.</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash"># 1. Create Namespace
+oc new-project rhoai-model-registries
+
+# 2. Deploy MySQL (Non-HA for Demo)
+oc apply -f deploy/model-registry/mysql-secret.yaml
+oc apply -f deploy/model-registry/mysql-pvc.yaml
+oc apply -f deploy/model-registry/mysql-deployment.yaml
+oc apply -f deploy/model-registry/mysql-service.yaml</code></pre>
+</div>
+</div>
+<div class="admonitionblock warning">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-warning" title="Warning"></i>
+</td>
+<td class="content">
+<div class="title">Security Notice</div>
+<div class="paragraph">
+<p>The default <code>mysql-secret.yaml</code> uses generic passwords (<code>mysql123</code>). For a production deployment, please rotate these credentials immediately.</p>
+</div>
+</td>
+</tr>
+</table>
+</div>
+<div class="sect2">
+<h3 id="_connect_rhoai_to_mysql"><a class="anchor" href="#_connect_rhoai_to_mysql"></a>Connect RHOAI to MySQL</h3>
+<div class="olist arabic">
+<ol class="arabic">
+<li>
+<p>Go to the <strong>OpenShift AI Dashboard</strong>.</p>
+</li>
+<li>
+<p>Navigate to <strong>Settings &#8594; Model resources and operations &#8594; Model registry settings</strong>.</p>
+</li>
+<li>
+<p>Click <strong>Create Model Registry</strong>.</p>
+</li>
+<li>
+<p>Enter the database connection details:</p>
+<div class="ulist">
+<ul>
+<li>
+<p><strong>Host:</strong> <code>mysql.rhoai-model-registries.svc.cluster.local</code></p>
+</li>
+<li>
+<p><strong>Port:</strong> <code>3306</code></p>
+</li>
+<li>
+<p><strong>Database:</strong> <code>sampledb</code></p>
+</li>
+<li>
+<p><strong>Username:</strong> <code>admin</code></p>
+</li>
+<li>
+<p><strong>Password:</strong> <code>see secret file</code></p>
+</li>
+</ul>
+</div>
+</li>
+</ol>
+</div>
+<div class="paragraph">
+<p>In a few minutes your model registry status should be <strong>Available</strong>.</p>
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_3_deploy_minio_setup_s3_storage"><a class="anchor" href="#_3_deploy_minio_setup_s3_storage"></a>3. Deploy MinIO (Setup S3 Storage)</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>We need S3-compatible storage for the <code>TrustyAI</code> evaluation results.</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash"># 1. Create Namespace &amp; Deploy
+oc new-project s3-storage
+oc apply -f deploy/storage/minio-backend.yaml -n s3-storage
+oc apply -f deploy/storage/s3ui-deployment.yaml -n s3-storage
+
+# 2. Acquire route to S3 storage UI.
+# (Requires 'oc' to have access to the MinIO CLI or use the UI)
+oc get route -n s3-storage | grep s3-ui</code></pre>
+</div>
+</div>
+<div class="admonitionblock warning">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-warning" title="Warning"></i>
+</td>
+<td class="content">
+<div class="title">Security Notice</div>
+<div class="paragraph">
+<p>The default <code>minio-backend.yaml</code> uses generic passwords (<code>xxxx123</code>). For a production deployment, please rotate these credentials immediately.</p>
+</div>
+</td>
+</tr>
+</table>
+</div>
+<div class="paragraph">
+<p>Open the route to the MinIO Console (User: <code>minio</code>, Pass: <code>minio123</code>) and create these four buckets:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p><code>pipeline-artifacts</code></p>
+</li>
+<li>
+<p><code>model-data</code></p>
+</li>
+<li>
+<p><code>benchmark-results</code></p>
+</li>
+<li>
+<p><code>quay-registry-bucket</code></p>
+</li>
+</ul>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_4_deploy_quay_registry_the_warehouse"><a class="anchor" href="#_4_deploy_quay_registry_the_warehouse"></a>4. Deploy Quay Registry (The Warehouse)</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>We use Quay to store our ModelCar images. If you don&#8217;t have a corporate Quay instance, we will deploy a lightweight standalone version.</p>
+</div>
+<div class="sect2">
+<h3 id="_update_the_quayquay_config_secret_rados_hostname_with_the_minio_api_route"><a class="anchor" href="#_update_the_quayquay_config_secret_rados_hostname_with_the_minio_api_route"></a>Update the quay/quay-config-secret-rados hostname with the Minio API route.</h3>
+<div class="paragraph">
+<p>Get the Minio API route:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash"> oc get route -n s3-storage | grep minio-api</code></pre>
+</div>
+</div>
+<div class="sect3">
+<h4 id="_replace_the_replace_me_with_minio_api_route_with_the_minio_api_route_from_the_previous_step_no_need_to_add_httphttps_or_the_port_for_example_your_hostname_should_look_similar_to_minio_api_s3_storage_apps_cluster_11111_22222_com"><a class="anchor" href="#_replace_the_replace_me_with_minio_api_route_with_the_minio_api_route_from_the_previous_step_no_need_to_add_httphttps_or_the_port_for_example_your_hostname_should_look_similar_to_minio_api_s3_storage_apps_cluster_11111_22222_com"></a>Replace the &lt;REPLACE_ME_WITH_MINIO_API_ROUTE&gt; with the Minio API route from the previous step. No need to add http/https or the port. For example, your hostname should look similar to: minio-api-s3-storage.apps.cluster-11111.22222.com</h4>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">apiVersion: v1
+kind: Secret
+metadata:
+  name: quay-minio-config-bundle
+  namespace: quay-registry # &lt;-- Your Quay namespace
+stringData:
+  config.yaml: |
+    DISTRIBUTED_STORAGE_CONFIG:
+      default:
+        - RadosGWStorage # actual driver
+        - access_key: 'minio'
+          secret_key: 'minio123'
+          bucket_name: 'quay-registry-bucket'
+          hostname: *'&lt;REPLACE_ME_WITH_MINIO_API_ROUTE&gt;'*
+          is_secure: true
+          #port: '9000'
+          storage_path: /datastorage/registry
+
+    DISTRIBUTED_STORAGE_DEFAULT_LOCATIONS:
+      - default
+
+    DISTRIBUTED_STORAGE_PREFERENCE:
+      - default</code></pre>
+</div>
+</div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_install_operator_instance"><a class="anchor" href="#_install_operator_instance"></a>Install Operator &amp; Instance</h3>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash"># 1. Create Namespace &amp; Install Operator
+oc new-project quay-registry
+oc apply -f deploy/quay/operator-group.yaml -n quay-registry
+oc apply -f quay/quay-config-secret-rados.yaml -n quay-registry
+oc apply -f deploy/quay/subscription.yaml -n quay-registry
+
+# 2. Wait for Operator (approx 30s)
+oc get pods -n quay-registry --watch
+
+# 3. Deploy Quay Instance (backed by local storage for demo)
+oc apply -f deploy/quay/quay-registry.yaml -n quay-registry</code></pre>
+</div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_configure_access"><a class="anchor" href="#_configure_access"></a>Configure Access</h3>
+<div class="paragraph">
+<p>To allow our pipelines to push images, we need a <strong>Robot Account</strong>.</p>
+</div>
+<div class="olist arabic">
+<ol class="arabic">
+<li>
+<p>Open the Quay UI (<code>oc get route -n quay-registry</code>) in a web browser.</p>
+</li>
+<li>
+<p>Select <strong>Create Account</strong></p>
+</li>
+<li>
+<p>Create an Account:</p>
+<div class="olist loweralpha">
+<ol class="loweralpha" type="a">
+<li>
+<p>username:  admin</p>
+</li>
+<li>
+<p>email address: <a href="mailto:admin@admin.com">admin@admin.com</a></p>
+</li>
+<li>
+<p>admin123</p>
+</li>
+</ol>
+</div>
+</li>
+<li>
+<p>Create a Robot Account (<code>amep-builder</code>) with <strong>Write</strong> permissions.</p>
+</li>
+<li>
+<p>Export the Kubernetes Secret YAML and apply it to your pipeline namespace:</p>
+</li>
+</ol>
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_verification"><a class="anchor" href="#_verification"></a>✅ Verification</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>Run this quick health check to ensure your factory floor is ready:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">echo "Checking Infrastructure Health..."
+oc get quayregistry -n quay-registry
+oc get pods -n rhoai-model-registries -l app=mysql
+oc get pods -n s3-storage -l app=minio</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>If all pods are <code>Running</code>, you are ready to start <strong>Phase 1</strong>.</p>
+</div>
+<div class="paragraph">
+<p><a href="#phase-1:index.adoc" class="xref unresolved">👉 Go to Phase 1: Package &amp; Register</a></p>
+</div>
+</div>
+</div>
+</article>
+  </div>
+</main>
+</div>
+<footer class="footer">
+  <img src="../../../_/img/rhl-logo-red.png" height="40px" alt="Red Hat"  href="https://redhat.com" >
+</footer><script id="site-script" src="../../../_/js/site.js" data-ui-root-path="../../../_"></script>
+<script async src="../../../_/js/vendor/highlight.js"></script>
+  </body>
+</html>

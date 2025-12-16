@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width,initial-scale=1">
     <title>ModelCar Pipeline Deployment :: Automated Multi Language LLM Evaluation Pipeline</title>
-    <link rel="prev" href="infrastructure-setup.html">
+    <link rel="prev" href="#infrastructure-setup.adoc">
     <link rel="next" href="evaluation-pipeline.html">
     <meta name="generator" content="Antora 3.1.3">
     <link rel="stylesheet" href="../../../_/css/site.css">
@@ -47,22 +47,10 @@
 <ul class="nav-list">
   <li class="nav-item" data-depth="1">
     <button class="nav-item-toggle"></button>
-    <a class="nav-link" href="../chapter1/index.html">Model Preparation</a>
+    <a class="nav-link" href="../chapter1/index.html">Platform Preparation</a>
 <ul class="nav-list">
   <li class="nav-item" data-depth="2">
-    <a class="nav-link" href="../chapter1/architecture.html">Downloading Models from HuggingFace</a>
-  </li>
-  <li class="nav-item" data-depth="2">
-    <a class="nav-link" href="../chapter1/multilang-evaluation.html">Model Compression</a>
-  </li>
-  <li class="nav-item" data-depth="2">
-    <span class="nav-text">xref:section1.adoc</span>
-  </li>
-  <li class="nav-item" data-depth="2">
-    <span class="nav-text">xref:section2.adoc</span>
-  </li>
-  <li class="nav-item" data-depth="2">
-    <span class="nav-text">xref:section3.adoc</span>
+    <span class="nav-text">xref:instrastructure-setup.adoc</span>
   </li>
 </ul>
   </li>
@@ -78,7 +66,7 @@
     <a class="nav-link" href="deployment-overview.html">Deployment Overview</a>
   </li>
   <li class="nav-item" data-depth="2">
-    <a class="nav-link" href="infrastructure-setup.html">Infrastructure Setup</a>
+    <a class="nav-link" href="#infrastructure-setup.adoc">Infrastructure Setup</a>
   </li>
   <li class="nav-item is-current-page" data-depth="2">
     <a class="nav-link" href="modelcar-pipeline.html">ModelCar Pipeline Deployment</a>
@@ -160,15 +148,6 @@
 <li>
 <p>Push image to Quay registry</p>
 </li>
-<li>
-<p>Register model in Model Registry</p>
-</li>
-<li>
-<p>Deploy model as InferenceService (optional)</p>
-</li>
-<li>
-<p>Evaluate model (optional)</p>
-</li>
 </ol>
 </div>
 </div>
@@ -182,7 +161,7 @@
 <div class="ulist">
 <ul>
 <li>
-<p><a href="infrastructure-setup.html" class="xref page">Infrastructure Setup</a> - Quay, Model Registry, and MinIO deployed</p>
+<p><a href="#infrastructure-setup.adoc" class="xref unresolved">Infrastructure Setup</a> - Quay, Model Registry, and MinIO deployed</p>
 </li>
 <li>
 <p>Pipeline namespace created (e.g., <code>modelcar-pipelines</code>)</p>
@@ -225,38 +204,6 @@
 </div>
 <div class="paragraph">
 <p>This creates a PVC named <code>modelcar-workspace-pvc</code> for storing model files during pipeline execution.</p>
-</div>
-</div>
-<div class="sect2">
-<h3 id="_deploy_compression_task"><a class="anchor" href="#_deploy_compression_task"></a>Deploy Compression Task</h3>
-<div class="paragraph">
-<p>The compression task uses llmcompressor to reduce model size:</p>
-</div>
-<div class="listingblock">
-<div class="content">
-<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">oc apply -f deploy/openshift/modelcar-compress-task.yaml -n modelcar-pipelines</code></pre>
-</div>
-</div>
-</div>
-<div class="sect2">
-<h3 id="_deploy_evaluation_tasks"><a class="anchor" href="#_deploy_evaluation_tasks"></a>Deploy Evaluation Tasks</h3>
-<div class="paragraph">
-<p>Deploy the evaluation tasks for model assessment:</p>
-</div>
-<div class="listingblock">
-<div class="content">
-<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash"># Standard evaluation task
-oc apply -f deploy/openshift/modelcar-evaluate-task.yaml -n modelcar-pipelines
-
-# GuideLLM performance evaluation
-oc apply -f deploy/openshift/modelcar-guidellm-containerized-task.yaml -n modelcar-pipelines
-
-# Multi-language evaluation
-oc apply -f deploy/openshift/modelcar-multilang-evaluate-task.yaml -n modelcar-pipelines
-
-# TrustyAI bias/fairness evaluation
-oc apply -f deploy/openshift/modelcar-trustyai-task.yaml -n modelcar-pipelines</code></pre>
-</div>
 </div>
 </div>
 <div class="sect2">
@@ -809,7 +756,7 @@ oc edit pipeline modelcar-pipeline -n modelcar-pipelines
 </div>
 </div>
 <nav class="pagination">
-  <span class="prev"><a href="infrastructure-setup.html">Infrastructure Setup</a></span>
+  <span class="prev"><a href="#infrastructure-setup.adoc">Infrastructure Setup</a></span>
   <span class="next"><a href="evaluation-pipeline.html">Evaluation Pipeline Deployment</a></span>
 </nav>
 </article>
