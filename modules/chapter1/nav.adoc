@@ -1,6 +1,6 @@
-* xref:index.adoc[Platform Preparation]
+* xref:index.adoc[Platform preparation]
 // ** xref:architecture.adoc[Downloading Models from HuggingFace]
-// ** xref:multilang-evaluation.adoc[Model Compression]
-** xref:infrastructure-setup.adoc
+//** xref:multilang-evaluation.adoc[Model compression]
+**  xref:infrastructure-setup.adoc[Infrastructure setup]
 //** xref:section2.adoc
 //** xref:section3.adoc
