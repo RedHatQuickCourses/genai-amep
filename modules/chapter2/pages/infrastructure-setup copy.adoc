@@ -1,0 +1,345 @@
+= Infrastructure Setup
+
+This guide covers the deployment of the foundational infrastructure components required for the GenAI AMEP platform on OpenShift AI.
+
+== Overview
+
+The infrastructure consists of three main components:
+
+* *Quay Registry*: For storing ModelCar OCI images
+* *Model Registry*: For tracking model metadata and versions (MySQL-backed)
+* *MinIO*: For S3-compatible object storage of evaluation results
+
+== Prerequisites
+
+* OpenShift AI or OpenShift cluster with admin access
+* `oc` CLI tool installed and configured
+* Cluster admin permissions for operator installation
+* Sufficient storage capacity (PVC support)
+
+== Deploy Quay Registry
+
+Quay serves as the enterprise container registry for storing packaged model OCI images.
+
+=== Install Quay Operator
+
+. Create the Quay namespace and install the operator:
++
+[source,bash]
+----
+oc create namespace quay-registry
+oc apply -f deploy/quay/operator-group.yaml
+oc apply -f deploy/quay/subscription.yaml
+----
+
+. Wait for the operator to be ready:
++
+[source,bash]
+----
+oc get csv -n quay-registry
+----
+
+=== Configure Quay with MinIO Backend
+
+. Create the Quay configuration secret pointing to MinIO:
++
+[source,bash]
+----
+oc apply -f deploy/quay/quay-config-secret-rados.yaml -n quay-registry
+----
+
+. Deploy the Quay registry instance:
++
+[source,bash]
+----
+oc apply -f deploy/quay/quay-registry.yaml
+----
+
+. Wait for Quay to be ready:
++
+[source,bash]
+----
+oc get quayregistry -n quay-registry
+oc get pods -n quay-registry
+----
+
+. Get the Quay route:
++
+[source,bash]
+----
+oc get route -n quay-registry
+----
+
+=== Create Quay Robot Account
+
+. Access the Quay web UI using the route URL
+. Create an organization (e.g., `admin`)
+. Create a robot account for pipeline access:
+** Navigate to Organization Settings → Robot Accounts
+** Create a new robot account with write permissions
+** Download the Kubernetes secret or note the credentials
+
+. Create a secret in your pipeline namespace:
++
+[source,bash]
+----
+oc create secret docker-registry quay-auth-secret \
+  --docker-server=<QUAY_ROUTE> \
+  --docker-username=<ROBOT_ACCOUNT> \
+  --docker-password=<ROBOT_TOKEN> \
+  -n <PIPELINE_NAMESPACE>
+----
+
+== Deploy Model Registry
+
+The Model Registry uses MySQL as its backend database to store model metadata and version information.
+
+=== Create Namespace
+
+[source,bash]
+----
+oc create namespace rhoai-model-registries
+----
+
+=== Deploy MySQL Database
+
+. Create the MySQL secret:
++
+[source,bash]
+----
+oc apply -f deploy/model-registry/mysql-secret.yaml -n rhoai-model-registries
+----
++
+NOTE: Update the secret with secure passwords before deploying to production.
+
+. Create the MySQL PVC:
++
+[source,bash]
+----
+oc apply -f deploy/model-registry/mysql-pvc.yaml -n rhoai-model-registries
+----
+
+. Deploy MySQL:
++
+[source,bash]
+----
+oc apply -f deploy/model-registry/mysql-deployment.yaml -n rhoai-model-registries
+oc apply -f deploy/model-registry/mysql-service.yaml -n rhoai-model-registries
+----
+
+. Verify MySQL is running:
++
+[source,bash]
+----
+oc get pods -n rhoai-model-registries
+oc logs -l name=mysql -n rhoai-model-registries
+----
+
+=== Configure Model Registry in OpenShift AI
+
+. Access the OpenShift AI dashboard
+. Navigate to Settings → Model Registry
+. Add a new model registry connection:
+** *Name*: `modelcar-registry`
+** *Host*: `mysql.rhoai-model-registries.svc.cluster.local`
+** *Port*: `3306`
+** *Database*: Use value from mysql-secret
+** *Username*: Use value from mysql-secret
+** *Password*: Use value from mysql-secret
+
+== Deploy MinIO Object Storage
+
+MinIO provides S3-compatible storage for evaluation results and model artifacts.
+
+=== Create Namespace
+
+[source,bash]
+----
+oc create namespace s3-storage
+----
+
+=== Deploy MinIO
+
+. Deploy MinIO with PVC and service:
++
+[source,bash]
+----
+oc apply -f deploy/storage/minio-backend.yaml -n s3-storage
+----
++
+This creates:
++
+* PersistentVolumeClaim (20Gi)
+* Secret with MinIO credentials
+* Deployment with MinIO container
+* Service for internal access
+* Route for external access
+
+. Wait for MinIO to be ready:
++
+[source,bash]
+----
+oc get pods -n s3-storage
+oc get route minio-api -n s3-storage
+----
+
+=== Configure MinIO Buckets
+
+. Access the MinIO console:
++
+[source,bash]
+----
+oc apply -f deploy/storage/s3ui-deployment.yaml -n s3-storage
+----
+
+. Get the MinIO console route:
++
+[source,bash]
+----
+oc get route -n s3-storage
+----
+
+. Log in to MinIO using credentials from the secret (default: `minio` / `minio123`)
+
+. Create buckets for evaluation results:
+** `guidellm-results` - For GuideLLM benchmark results
+** `lm-eval-results` - For lm-eval task results
+** `model-artifacts` - For model files and artifacts
+
+=== Create S3 Credentials Secret
+
+Create a secret in your pipeline namespace with MinIO credentials:
+
+[source,bash]
+----
+oc create secret generic s3-credentials \
+  --from-literal=access-key-id=minio \
+  --from-literal=secret-access-key=minio123 \
+  --from-literal=endpoint=http://minio-service.s3-storage.svc.cluster.local:9000 \
+  -n <PIPELINE_NAMESPACE>
+----
+
+== Deploy OpenShift Pipelines
+
+If not already installed, deploy the OpenShift Pipelines operator:
+
+[source,bash]
+----
+# Install from OperatorHub via web console or:
+cat <<EOF | oc apply -f -
+apiVersion: operators.coreos.com/v1alpha1
+kind: Subscription
+metadata:
+  name: openshift-pipelines-operator
+  namespace: openshift-operators
+spec:
+  channel: latest
+  name: openshift-pipelines-operator-rh
+  source: redhat-operators
+  sourceNamespace: openshift-marketplace
+EOF
+----
+
+== Create Pipeline Namespace
+
+Create a dedicated namespace for running pipelines:
+
+[source,bash]
+----
+oc create namespace modelcar-pipelines
+----
+
+== Configure RBAC
+
+Apply the necessary roles and role bindings for pipeline execution:
+
+[source,bash]
+----
+oc apply -f deploy/openshift/role.yaml -n modelcar-pipelines
+oc apply -f deploy/openshift/role-binding.yaml -n modelcar-pipelines
+----
+
+== Configure Resource Quotas
+
+Apply resource quotas to manage resource consumption:
+
+[source,bash]
+----
+oc apply -f deploy/openshift/resource-quota.yaml -n modelcar-pipelines
+----
+
+== Create Hugging Face Secret
+
+If you plan to download gated models from Hugging Face, create a secret with your token:
+
+[source,bash]
+----
+oc create secret generic huggingface-secret \
+  --from-literal=HUGGINGFACE_TOKEN=<YOUR_HF_TOKEN> \
+  -n modelcar-pipelines
+----
+
+== Verification
+
+Verify that all infrastructure components are running:
+
+[source,bash]
+----
+# Check Quay
+oc get quayregistry -n quay-registry
+oc get pods -n quay-registry
+
+# Check Model Registry (MySQL)
+oc get pods -n rhoai-model-registries
+oc get svc mysql -n rhoai-model-registries
+
+# Check MinIO
+oc get pods -n s3-storage
+oc get svc minio-service -n s3-storage
+
+# Check Pipeline namespace
+oc get sa -n modelcar-pipelines
+oc get secrets -n modelcar-pipelines
+----
+
+
+== Troubleshooting
+
+=== Quay Issues
+
+If Quay pods are not starting:
+
+[source,bash]
+----
+# Check operator logs
+oc logs -l app=quay-operator -n quay-registry
+
+# Check Quay pod logs
+oc logs -l app=quay -n quay-registry
+----
+
+=== MySQL Connection Issues
+
+If the model registry cannot connect to MySQL:
+
+[source,bash]
+----
+# Test MySQL connection
+oc run mysql-test --rm -it --image=mysql:8.0 -- \
+  mysql -h mysql.rhoai-model-registries.svc.cluster.local \
+  -u <USERNAME> -p<PASSWORD> -e "SHOW DATABASES;"
+----
+
+=== MinIO Access Issues
+
+If MinIO is not accessible:
+
+[source,bash]
+----
+# Check MinIO logs
+oc logs -l app=minio -n s3-storage
+
+# Test S3 API
+oc run s3-test --rm -it --image=amazon/aws-cli -- \
+  s3 ls --endpoint-url http://minio-service.s3-storage.svc.cluster.local:9000
+----

@@ -1,0 +1,192 @@
+= Infrastructure Bootstrap
+:navtitle: Infrastructure Setup
+:description: Deploying the necessary prerequisites (Quay, Model Registry, S3) for the evaluation pipeline.
+:page-role: platform-engineer
+
+[.lead]
+Before we can treat models like software, we need the "Factory Floor." This section covers the automated deployment of the core infrastructure components required for the AMEP solution.
+
+[NOTE]
+.Existing Infrastructure?
+====
+If you already have access to an S3 bucket, an Image Registry (Quay), and the OpenShift AI Model Registry, you can **skip this page** and proceed to xref:phase-1:index.adoc[Phase 1].
+====
+
+== 🏗️ Architecture Overview
+
+The "AMEP" framework relies on three pillars of infrastructure:
+
+. **The Warehouse (Quay):** Stores our "ModelCars" (OCI Artifacts).
+. **The Catalog (Model Registry):** Tracks metadata, versions, and lineage (backed by MySQL).
+. **The Archive (MinIO/S3):** Stores the raw JSON results from our evaluations.
+
+image::infra-diagram.png[Infrastructure Overview, align="center"]
+
+== 1. Prerequisites
+
+Ensure you have the following before running the bootstrap scripts:
+
+* OpenShift AI 3.0 installed.
+* `cluster-admin` access via the `oc` CLI.
+* The `genai-amep` repository cloned locally.
+
+[source,bash]
+----
+git clone https://github.com/RedHatQuickCourses/genai-amep.git
+cd genai-amep
+----
+
+== 2. Deploy Model Registry Backend (The Catalog)
+
+OpenShift AI 3.0 includes the Model Registry, but it requires a database backend. We will deploy a MySQL instance to serve this purpose.
+
+[source,bash]
+----
+# 1. Create Namespace
+oc new-project rhoai-model-registries
+
+# 2. Deploy MySQL (Non-HA for Demo)
+oc apply -f deploy/model-registry/mysql-secret.yaml
+oc apply -f deploy/model-registry/mysql-pvc.yaml
+oc apply -f deploy/model-registry/mysql-deployment.yaml
+oc apply -f deploy/model-registry/mysql-service.yaml
+----
+
+[WARNING]
+.Security Notice
+====
+The default `mysql-secret.yaml` uses generic passwords (`mysql123`). For a production deployment, please rotate these credentials immediately.
+====
+
+=== Connect RHOAI to MySQL
+1. Go to the **OpenShift AI Dashboard**.
+2. Navigate to **Settings -> Model resources and operations -> Model registry settings**.
+3. Click **Create Model Registry**.
+4. Enter the database connection details:
+   * **Host:** `mysql.rhoai-model-registries.svc.cluster.local`
+   * **Port:** `3306`
+   * **Database:** `sampledb`
+   * **Username:** `admin`
+   * **Password:** `see secret file`
+
+
+In a few minutes your model registry status should be *Available*.
+
+
+== 3. Deploy MinIO (Setup S3 Storage)
+
+We need S3-compatible storage for the `TrustyAI` evaluation results.
+
+[source,bash]
+----
+# 1. Create Namespace & Deploy
+oc new-project s3-storage
+oc apply -f deploy/storage/minio-backend.yaml -n s3-storage
+oc apply -f deploy/storage/s3ui-deployment.yaml -n s3-storage
+
+# 2. Acquire route to S3 storage UI.
+# (Requires 'oc' to have access to the MinIO CLI or use the UI)
+oc get route -n s3-storage | grep s3-ui
+----
+
+[WARNING]
+.Security Notice
+====
+The default `minio-backend.yaml` uses generic passwords (`xxxx123`). For a production deployment, please rotate these credentials immediately.
+====
+
+Open the route to the MinIO Console (User: `minio`, Pass: `minio123`) and create these four buckets:
+
+* `pipeline-artifacts`
+* `model-data`
+* `benchmark-results`
+* `quay-registry-bucket`
+
+
+== 4. Deploy Quay Registry (The Warehouse)
+
+We use Quay to store our ModelCar images. If you don't have a corporate Quay instance, we will deploy a lightweight standalone version.
+
+=== Update the quay/quay-config-secret-rados hostname with the Minio API route.
+
+Get the Minio API route:
+[source,bash]
+----
+ oc get route -n s3-storage | grep minio-api
+----
+
+==== Replace the <REPLACE_ME_WITH_MINIO_API_ROUTE> with the Minio API route from the previous step. No need to add http/https or the port. For example, your hostname should look similar to: minio-api-s3-storage.apps.cluster-11111.22222.com
+
+[source,bash]
+----
+apiVersion: v1
+kind: Secret
+metadata:
+  name: quay-minio-config-bundle
+  namespace: quay-registry # <-- Your Quay namespace
+stringData:
+  config.yaml: |
+    DISTRIBUTED_STORAGE_CONFIG:
+      default:
+        - RadosGWStorage # actual driver
+        - access_key: 'minio'
+          secret_key: 'minio123'
+          bucket_name: 'quay-registry-bucket'
+          hostname: *'<REPLACE_ME_WITH_MINIO_API_ROUTE>'*
+          is_secure: true
+          #port: '9000'
+          storage_path: /datastorage/registry
+
+    DISTRIBUTED_STORAGE_DEFAULT_LOCATIONS:
+      - default
+
+    DISTRIBUTED_STORAGE_PREFERENCE:
+      - default
+----
+
+=== Install Operator & Instance
+[source,bash]
+----
+# 1. Create Namespace & Install Operator
+oc new-project quay-registry
+oc apply -f deploy/quay/operator-group.yaml -n quay-registry
+oc apply -f quay/quay-config-secret-rados.yaml -n quay-registry
+oc apply -f deploy/quay/subscription.yaml -n quay-registry
+
+# 2. Wait for Operator (approx 30s)
+oc get pods -n quay-registry --watch
+
+# 3. Deploy Quay Instance (backed by local storage for demo)
+oc apply -f deploy/quay/quay-registry.yaml -n quay-registry
+----
+
+=== Configure Access
+To allow our pipelines to push images, we need a **Robot Account**.
+
+. Open the Quay UI (`oc get route -n quay-registry`) in a web browser.
+. Select *Create Account*
+. Create an Account:
+.. username:  admin
+.. email address: admin@admin.com
+.. admin123
+
+
+. Create a Robot Account (`amep-builder`) with **Write** permissions.
+. Export the Kubernetes Secret YAML and apply it to your pipeline namespace:
+
+
+== ✅ Verification
+
+Run this quick health check to ensure your factory floor is ready:
+
+[source,bash]
+----
+echo "Checking Infrastructure Health..."
+oc get quayregistry -n quay-registry
+oc get pods -n rhoai-model-registries -l app=mysql
+oc get pods -n s3-storage -l app=minio
+----
+
+If all pods are `Running`, you are ready to start **Phase 1**.
+
+xref:phase-1:index.adoc[👉 Go to Phase 1: Package & Register]

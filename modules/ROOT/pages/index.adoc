@@ -1,80 +1,90 @@
-= Automated Multi-Language LLM Evaluation Pipeline
-:navtitle: Introduction
+= Automated Multilingual Evaluation Pipeline (AMEP)
+:navtitle: Home
+:description: A modular framework for evaluating LLMs on OpenShift AI 3.0.
+:keywords: openshift ai, rhoai, llm, evaluation, trustyai, model registry, vllm
 
-== Overview
+[.lead]
+A deployable, modular solution framework for Platform Engineers to package, deploy, and evaluate Large Language Models (LLMs) on Red Hat OpenShift AI 3.0.
 
-This guide documents an automated pipeline for evaluating Large Language Models (LLMs) across multiple languages using Red Hat OpenShift AI as the platform.
+== 👋 Welcome
 
-*Original solution developed by*: Red Hat AI Customer Adoption and Innovation team (CAI) and can be found here:  https://github.com/rh-aiservices-bu/model-car-importer.git[model-car-importer repository, window=blank]
+Welcome to the **Automated Multilingual Evaluation Pipeline (AMEP)** solution kit.
 
-== What This Step=-by-Step Pipeline Does
+If you are a **Platform Engineer**, you know the struggle: your AI Developers and Data Scientists want to use the "latest and greatest" open-source models, but they need to know if those models actually work for your specific business requirements—especially when supporting multiple languages.
 
-This automated solution provides end-to-end capabilities for:
+This solution is designed to help you solve the "Paradox of Choice." It provides the architectural plumbing to turn ad-hoc model guessing into a standardized engineering process.
 
-. *Model Acquisition*: Download models from HuggingFace Hub
-. *Container Packaging*: Package models in Modelcar OCI containers
-. *Registry Management*: Register models in OpenShift AI Model Registry
-. *Model Deployment*: Deploy models using vLLM runtime for inference
-. *Multi-Language Evaluation*: Test model performance across English, Spanish, and Japanese
-. *Bias Detection*: Optional TrustyAI integration for fairness testing
-. *Results Storage*: Store evaluation results in S3-compatible storage
-. *Results Analysis*: Visualize and compare results using Jupyter notebooks
+[NOTE]
+.A Modular Framework
+====
+This solution is broken down into **four distinct, manual phases**. This design allows you to understand exactly how the components interact, debug easily, and reuse individual modules in your own custom workflows.
+====
 
-== Key Features
+== 🎯 Who Is This For?
 
-=== Multi-Language Support
+We built this specifically for the people building atoken generation platform used to build Gen AI powered applications:
 
-Evaluate your models across three languages:
+* **Platform Engineers (Primary):** You need to provide a robust service to your Gen AI development teams. This guide shows you how to build the infrastructure for model evaluation.
+* **Service Consultants:** You are delivering OpenShift AI solutions to customers. Use this kit as a reference architecture or a base for your delivery engagements.
+* **Red Hat Partners:** You are building integrations on top of OpenShift AI 3.0. This framework demonstrates practices for using RHOAI Model Registry, Packaging Models in ModelCar, and using TrustyAI LM_Eval integration.
 
-* *English (en)*: Standard benchmarks including ARC-Easy, HellaSwag, WinoGrande, TruthfulQA
-* *Spanish (es)*: BELEBELE Spanish, XNLI Spanish
-* *Japanese (ja)*: BELEBELE Japanese, XNLI Japanese
+== 🧩 The Solution Framework
 
-=== Automated Workflow
+The solution is divided into four sequential phases. You can run them in order to build the full pipeline, or use them independently.
 
-The entire pipeline is automated using Tekton on OpenShift, allowing you to:
+=== Phase 1: Package & Register 📦
+**"Treat Models Like Software"** +
+Stop downloading weights at runtime. We show you how to package an LLM into an OCI container image (a "ModelCar") using `podman`. You will then register this artifact in the **OpenShift AI Model Registry** for governance and versioning.
 
-* Run evaluations with a single command
-* Skip specific steps as needed
-* Track progress through the OpenShift Console
-* Store and compare results over time
+=== Phase 2: Deploy (vLLM) 🚀
+**"High-Performance Serving"** +
+Manually trigger the deployment of your registered model using **vLLM**, the state-of-the-art inference engine. You will configure the `ServingRuntime` and ensure GPU resources are allocated correctly.
 
-=== Flexible Configuration
+=== Phase 3: Evaluate (TrustyAI) ⚖️
+**"The Test Drive"** +
+Deploy a **TrustyAI LMEval_Job**—a Kubernetes Custom Resource that automatically runs standardized fluency tests against your deployed model.
+* **Languages Tested:** English 🇺🇸, Spanish 🇪🇸, Japanese 🇯🇵
+* **Metrics:** Accuracy, Fluency, and Hallucination resistance.
 
-* Enable/disable specific evaluation types
-* Configure S3 storage for results
-* Adjust vLLM parameters for your hardware
-* Choose which languages to evaluate
+=== Phase 4: Visualize 📊
+**"Make It Visible"** +
+Gather raw JSON data from object storage (S3) and use a Jupyter Notebook to generate a **Radar Chart**. This provides a clean visual artifact to show stakeholders exactly how different models compare.
 
-== Pipeline Components
+== 🛠️ Tech Stack
 
-The pipeline consists of several integrated components working together:
+This solution utilizes standard, cloud-native components available in OpenShift AI 3.0:
 
-1. *Model Download*: Pulls models from HuggingFace Hub
-2. *Model Compression*: Optional weight quantization for efficiency
-3. *Modelcar Packaging*: Creates OCI container images with embedded models
-4. *Model Registry*: Manages model versions and metadata
-5. *vLLM Deployment*: Serves models with high-performance inference
-6. *Multi-Language Evaluation*: Runs benchmarks across languages
-7. *TrustyAI Integration*: Tests for bias and fairness (optional)
-8. *S3 Storage*: Persists results for historical comparison
-9. *Jupyter Analysis*: Visualizes performance across languages
+[cols="1,3"]
+|===
+|Component | Role
 
-== Who Should Use This
+|**Model Registry**
+|Central catalog for tracking ModelCar versions and metadata.
 
-This pipeline is designed for:
+|**vLLM**
+|High-performance inference engine (via KServe) for serving models.
 
-* *ML Engineers*: Evaluating model performance across languages
-* *AI Platform Teams*: Standardizing model evaluation workflows
-* *Data Scientists*: Comparing model variants and optimizations
-* *Quality Assurance*: Testing models for bias and fairness
+|**TrustyAI**
+|Executes the `lm-evaluation-harness` to metricize performance.
 
-== Next Steps
+|**S3 Storage**
+|Stores evaluation datasets and resulting metrics (ODF/MinIO).
 
-. Review the xref:architecture.adoc[Pipeline Architecture]
-. Check xref:prerequisites.adoc[Prerequisites] for your environment
-. Follow the xref:chapter1:index.adoc[Model Preparation] guide to get started
+|**Jupyter**
+|Provides the interactive dashboard for result analysis.
+|===
 
-== Support and Contribution
+== 🚀 Prerequisites
 
-For issues, questions, or contributions, contact the Red Hat AI Customer Adoption and Innovation team (CAI).
+Before starting Phase 1, ensure you have the following:
+
+* [ ] Access to an **OpenShift AI 3.0+** cluster.
+* [ ] **Cluster Admin** privileges (required for setting up initial ServingRuntimes).
+* [ ] **S3 Storage** credentials (bucket name, endpoint, access key, secret key).
+* [ ] A **Container Registry** (Quay.io or internal) to push your ModelCar images.
+
+== Let's Get Started
+
+Ready to build the foundation?
+
+* xref:phase-1:index.adoc[Start with Phase 1: Package & Register]

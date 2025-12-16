@@ -11,9 +11,7 @@ The ModelCar pipeline automates the complete workflow of downloading, optionally
 . Compress model (optional)
 . Build ModelCar OCI image using OLOT
 . Push image to Quay registry
-. Register model in Model Registry
-. Deploy model as InferenceService (optional)
-. Evaluate model (optional)
+
 
 == Prerequisites
 
@@ -41,33 +39,6 @@ oc apply -f deploy/openshift/modelcar-storage.yaml -n modelcar-pipelines
 
 This creates a PVC named `modelcar-workspace-pvc` for storing model files during pipeline execution.
 
-=== Deploy Compression Task
-
-The compression task uses llmcompressor to reduce model size:
-
-[source,bash]
-----
-oc apply -f deploy/openshift/modelcar-compress-task.yaml -n modelcar-pipelines
-----
-
-=== Deploy Evaluation Tasks
-
-Deploy the evaluation tasks for model assessment:
-
-[source,bash]
-----
-# Standard evaluation task
-oc apply -f deploy/openshift/modelcar-evaluate-task.yaml -n modelcar-pipelines
-
-# GuideLLM performance evaluation
-oc apply -f deploy/openshift/modelcar-guidellm-containerized-task.yaml -n modelcar-pipelines
-
-# Multi-language evaluation
-oc apply -f deploy/openshift/modelcar-multilang-evaluate-task.yaml -n modelcar-pipelines
-
-# TrustyAI bias/fairness evaluation
-oc apply -f deploy/openshift/modelcar-trustyai-task.yaml -n modelcar-pipelines
-----
 
 === Deploy Main Pipeline
 

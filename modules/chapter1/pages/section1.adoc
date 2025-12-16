@@ -1,24 +1,162 @@
-= Quay Registry Options
+= Infrastructure Bootstrap
+:navtitle: Infrastructure Setup
+:description: Deploying the necessary prerequisites (Quay, Model Registry, S3) for the evaluation pipeline.
+:page-role: platform-engineer
 
-== Deploy locally -
+[.lead]
+Before we can treat models like software, we need the "Factory Floor." This section covers the automated deployment of the core infrastructure components required for the AMEP solution.
 
+[NOTE]
+.Existing Infrastructure?
+====
+If you already have access to an S3 bucket, an Image Registry (Quay), and the OpenShift AI Model Registry, you can **skip this page** and proceed to xref:phase-1:index.adoc[Phase 1].
+====
 
+== 🏗️ Architecture Overview
 
-== Use Red Hat Quay
+The "AMEP" framework relies on three pillars of infrastructure:
 
-Log in to Quay.io
-Navigate to your organization or user account
-Click on "Robot Accounts" in the left sidebar menu
-Click "Create Robot Account" button
-Enter a name for the robot account (e.g. modelcar-pipeline)
-Click "Create Robot Account"
-On the next screen, click "Edit Repository Permissions"
-Search for and select your target repository
-Set permissions to "Write" access
-Click "Update Permission"
-Save the robot account credentials:
-Username will be in format: your-org+robot-name
-Password will be shown only once - copy it immediately
-Use these credentials in your .env file:
-QUAY_USERNAME="your-org+robot-name"
-QUAY_PASSWORD="robot-account-password" 
+. **The Warehouse (Quay):** Stores our "ModelCars" (OCI Artifacts).
+. **The Catalog (Model Registry):** Tracks metadata, versions, and lineage (backed by MySQL).
+. **The Archive (MinIO/S3):** Stores the raw JSON results from our evaluations.
+
+image::infra-diagram.png[Infrastructure Overview, align="center"]
+
+== 1. Prerequisites
+
+Ensure you have the following before running the bootstrap scripts:
+
+* OpenShift AI 3.0 (or 2.13+) installed.
+* `cluster-admin` access via the `oc` CLI.
+* The `genai-amep` repository cloned locally.
+
+[source,bash]
+----
+git clone https://github.com/your-org/genai-amep.git
+cd genai-amep
+----
+
+== 2. Deploy Quay Registry (The Warehouse)
+
+We use Quay to store our ModelCar images. If you don't have a corporate Quay instance, we will deploy a lightweight standalone version.
+
+=== Install Operator & Instance
+[source,bash]
+----
+# 1. Create Namespace & Install Operator
+oc create namespace quay-registry
+oc apply -f deploy/infrastructure/quay/operator-group.yaml
+oc apply -f deploy/infrastructure/quay/subscription.yaml
+
+# 2. Wait for Operator (approx 30s)
+oc rollout status deployment quay-operator -n quay-registry
+
+# 3. Deploy Quay Instance (backed by local storage for demo)
+oc apply -f deploy/infrastructure/quay/quay-registry.yaml
+----
+
+=== Configure Access
+To allow our pipelines to push images, we need a **Robot Account**.
+
+. Open the Quay UI (`oc get route -n quay-registry`).
+. Create an Organization named `amep-models`.
+. Create a Robot Account (`amep-builder`) with **Write** permissions.
+. Export the Kubernetes Secret YAML and apply it to your pipeline namespace:
+
+[source,bash]
+----
+oc create secret docker-registry quay-auth-secret \
+  --docker-server=<QUAY_ROUTE_HOST> \
+  --docker-username="amep-models+amep-builder" \
+  --docker-password=<GENERATED_TOKEN> \
+  -n amep-pipelines
+----
+
+== 3. Deploy Model Registry Backend (The Catalog)
+
+OpenShift AI 3.0 includes the Model Registry, but it requires a database backend. We will deploy a MySQL instance to serve this purpose.
+
+[source,bash]
+----
+# 1. Create Namespace
+oc create namespace rhoai-model-registries
+
+# 2. Deploy MySQL (Non-HA for Demo)
+oc apply -f deploy/infrastructure/model-registry/mysql-secret.yaml
+oc apply -f deploy/infrastructure/model-registry/mysql-pvc.yaml
+oc apply -f deploy/infrastructure/model-registry/mysql-deployment.yaml
+oc apply -f deploy/infrastructure/model-registry/mysql-service.yaml
+----
+
+[WARNING]
+.Security Notice
+====
+The default `mysql-secret.yaml` uses generic passwords (`mysql123`). For a production deployment, please rotate these credentials immediately.
+====
+
+=== Connect RHOAI to MySQL
+1. Go to the **OpenShift AI Dashboard**.
+2. Navigate to **Settings -> Model Registry**.
+3. Click **Add Registry**.
+4. Enter the internal DNS details:
+   * **Host:** `mysql.rhoai-model-registries.svc.cluster.local`
+   * **Port:** `3306`
+   * **Database:** `model_registry`
+
+== 4. Deploy MinIO (The Archive)
+
+We need S3-compatible storage for the `TrustyAI` evaluation results.
+
+[source,bash]
+----
+# 1. Create Namespace & Deploy
+oc create namespace s3-storage
+oc apply -f deploy/infrastructure/minio/minio-backend.yaml
+
+# 2. Create Buckets
+# (Requires 'oc' to have access to the MinIO CLI or use the UI)
+oc expose svc minio-ui -n s3-storage
+----
+
+Log in to the MinIO Console (User: `minio`, Pass: `minio123`) and create these three buckets:
+* `pipeline-artifacts`
+* `model-data`
+* `trustyai-results`
+
+== 5. Configure Pipeline Secrets
+
+Finally, we glue everything together by creating the secrets in our pipeline namespace (`amep-pipelines`).
+
+[source,bash]
+----
+# 1. Create Pipeline Namespace
+oc create namespace amep-pipelines
+
+# 2. S3 Credentials
+oc create secret generic s3-credentials \
+  --from-literal=access-key-id=minio \
+  --from-literal=secret-access-key=minio123 \
+  --from-literal=endpoint=http://minio-service.s3-storage.svc.cluster.local:9000 \
+  -n amep-pipelines
+
+# 3. HuggingFace Token (For downloading models)
+oc create secret generic huggingface-secret \
+  --from-literal=HUGGINGFACE_TOKEN=<YOUR_HF_TOKEN> \
+  -n amep-pipelines
+----
+
+== ✅ Verification
+
+Run this quick health check to ensure your factory floor is ready:
+
+[source,bash]
+----
+echo "Checking Infrastructure Health..."
+oc get quayregistry -n quay-registry
+oc get pods -n rhoai-model-registries -l app=mysql
+oc get pods -n s3-storage -l app=minio
+----
+
+If all pods are `Running`, you are ready to start **Phase 1**.
+
+xref:phase-1:index.adoc[👉 Go to Phase 1: Package & Register]
