@@ -4,22 +4,39 @@ This guide covers the deployment and usage of the GuideLLM evaluation pipeline f
 
 == Overview
 
-The evaluation pipeline provides automated testing and benchmarking of deployed models. It consists of multiple integrated evaluation tasks:
+The evaluation pipeline provides automated testing and benchmarking of deployed models. It works in conjunction with the xref:modelcar-pipeline.adoc[ModelCar Pipeline] to evaluate models that have been packaged and optionally deployed.
 
+The evaluation pipeline consists of multiple integrated evaluation tasks:
+
+* *Model Deployment* (optional): Deploys models using Helm if not already deployed
 * *GuideLLM Benchmarking*: Performance, throughput, and latency testing
-* *LM-Eval Tasks*: Accuracy evaluation using lm-eval-harness (MMLU, HumanEval, MBPP, etc.)
+* *LM-Eval Tasks*: Accuracy evaluation using TrustyAI LMEvalJob (MMLU, HumanEval, MBPP, etc.)
 * *Custom Evaluation Tasks*: Support for custom evaluation datasets
-* *Model Registry Integration*: Automatic registration of evaluation results
 * *S3 Storage*: Automated upload of results to object storage
+* *Model Registry Integration*: Automatic registration of evaluation results
+
+[NOTE]
+====
+**Relationship to ModelCar Pipeline:**
+* The ModelCar pipeline packages models into OCI images and can deploy them
+* The evaluation pipeline evaluates already-deployed models OR can deploy them first
+* Both pipelines can work independently, but typically you:
+  1. Package a model using ModelCar pipeline
+  2. Evaluate the deployed model using this evaluation pipeline
+  3. Results are stored in S3 and registered in the Model Registry
+====
 
 == Prerequisites
 
 Before deploying the evaluation pipeline, ensure you have:
 
 * xref:infrastructure-setup.adoc[Infrastructure Setup] completed (MinIO, Model Registry)
-* xref:modelcar-pipeline.adoc[ModelCar Pipeline] deployed
-* A deployed model (InferenceService) to evaluate
+* xref:modelcar-pipeline.adoc[ModelCar Pipeline] deployed and a model packaged
+* OpenShift AI 3.0+ with TrustyAI operator installed (for LMEvalJob support)
+* A deployed model (InferenceService) to evaluate, or the pipeline will deploy one
 * Pipeline namespace configured (e.g., `modelcar-pipelines`)
+* A separate namespace for model deployments (e.g., `vllm`) - this is where LMEvalJobs run
+* ServiceAccount named `pipeline` in the pipeline namespace with appropriate permissions
 
 == Pipeline Architecture
 
@@ -35,12 +52,12 @@ graph LR
     E --> F[Register Results in Model Registry]
 ----
 
-. *Deploy Model*: Deploys the model as a vLLM InferenceService (or uses existing deployment)
-. *GuideLLM Benchmark*: Runs performance benchmarking
-. *Upload GuideLLM Results*: Stores benchmark results in S3
-. *LM-Eval Tasks*: Runs accuracy evaluation tasks
-. *Upload LM-Eval Results*: Stores evaluation results in S3
-. *Register Results*: Updates model registry with evaluation metadata
+. *Deploy Model*: Optionally deploys the model as a vLLM InferenceService using Helm (if not already deployed)
+. *GuideLLM Benchmark*: Runs performance benchmarking against the model endpoint
+. *Upload GuideLLM Results*: Stores benchmark results in S3 (bucket: `guidellm-results`)
+. *LM-Eval Tasks*: Creates and runs TrustyAI LMEvalJob for accuracy evaluation
+. *Upload LM-Eval Results*: Stores evaluation results in S3 (bucket: `lm-eval-results`)
+. *Register Results*: Updates model registry with evaluation metadata and links to results
 
 == Deploy Pipeline Components
 
@@ -82,18 +99,37 @@ oc apply -f deploy/guidellm-pipeline/pipeline/model-registry-task.yaml -n modelc
 
 === Create Evaluation ConfigMaps
 
-Create ConfigMaps for LM-Eval job definitions:
+The pipeline requires ConfigMaps for LM-Eval job definitions. Note that `mmlu.yaml` is actually a LMEvalJob Custom Resource, not a ConfigMap:
 
 [source,bash]
 ----
-# MMLU evaluation job
-oc apply -f deploy/guidellm-pipeline/pipeline/mmlu.yaml -n modelcar-pipelines
+# Create namespace for model deployments (if it doesn't exist)
+oc create namespace vllm --dry-run=client -o yaml | oc apply -f -
 
-# Custom MMLU task (if using custom datasets)
-oc apply -f deploy/guidellm-pipeline/custom-lm-eval/custom-mmlu.yaml -n modelcar-pipelines
-oc apply -f deploy/guidellm-pipeline/custom-lm-eval/custom-task.yaml -n modelcar-pipelines
-oc apply -f deploy/guidellm-pipeline/custom-lm-eval/task.yaml -n modelcar-pipelines
+# Create ConfigMap for standard MMLU evaluation job manifest
+oc create configmap mmlu-manifest \
+  --from-file=mmlu.yaml=deploy/guidellm-pipeline/pipeline/mmlu.yaml \
+  -n modelcar-pipelines
+
+# Create ConfigMap for custom evaluation (if using custom datasets)
+oc create configmap custom-mmlu \
+  --from-file=custom-mmlu.yaml=deploy/guidellm-pipeline/custom-lm-eval/custom-mmlu.yaml \
+  --from-file=task.yaml=deploy/guidellm-pipeline/custom-lm-eval/task.yaml \
+  --from-file=custom-task.yaml=deploy/guidellm-pipeline/custom-lm-eval/custom-task.yaml \
+  --from-file=data.jsonl=deploy/guidellm-pipeline/custom-lm-eval/data.jsonl \
+  -n modelcar-pipelines
+
+# For custom evaluations, you may also need to create a ConfigMap with your custom data
+# oc create configmap custom-lmeval-benchmark-files \
+#   --from-file=task.yaml=deploy/guidellm-pipeline/custom-lm-eval/task.yaml \
+#   --from-file=data.jsonl=deploy/guidellm-pipeline/custom-lm-eval/data.jsonl \
+#   -n vllm
 ----
+
+[NOTE]
+====
+The LMEvalJob Custom Resources are applied to the `vllm` namespace (or your model deployment namespace), not the pipeline namespace. The ConfigMaps are used by the pipeline to store the job definitions.
+====
 
 === Deploy Main Pipeline
 
@@ -104,18 +140,37 @@ Deploy the main evaluation pipeline:
 oc apply -f deploy/guidellm-pipeline/pipeline/benchmark-eval-pipeline.yaml -n modelcar-pipelines
 ----
 
+=== Create ServiceAccount
+
+The pipeline requires a ServiceAccount with permissions to create and manage resources:
+
+[source,bash]
+----
+# Create ServiceAccount (if not already exists)
+oc create serviceaccount pipeline -n modelcar-pipelines --dry-run=client -o yaml | oc apply -f -
+
+# Grant necessary permissions (adjust as needed for your environment)
+# The ServiceAccount needs permissions to:
+# - Create/delete LMEvalJobs in the vllm namespace
+# - Access ConfigMaps and PVCs
+# - Deploy models using Helm (if using deploy-model task)
+----
+
 === Verify Pipeline Deployment
 
 [source,bash]
 ----
 # Check tasks
-oc get tasks -n modelcar-pipelines | grep -E "(guidellm|lm-eval|deploy-model|upload|model-registry)"
+oc get tasks -n modelcar-pipelines | grep -E "(guidellm-benchmark|lm-eval|deploy-model|upload-guidellm|upload-lm-eval|model-registry)"
 
 # Check pipeline
 oc get pipeline guidellm-benchmark-pipeline -n modelcar-pipelines
 
 # Check ConfigMaps
-oc get configmap -n modelcar-pipelines | grep -E "(mmlu|custom)"
+oc get configmap -n modelcar-pipelines | grep -E "(mmlu-manifest|custom-mmlu)"
+
+# Check ServiceAccount
+oc get serviceaccount pipeline -n modelcar-pipelines
 ----
 
 == Running the Evaluation Pipeline
@@ -137,9 +192,9 @@ spec:
     name: guidellm-benchmark-pipeline
   params:
     - name: target
-      value: "http://<MODEL_SERVICE>.<NAMESPACE>.svc.cluster.local:8080/v1"
+      value: "http://granite-2b-predictor.vllm.svc.cluster.local:8080/v1"
     - name: model-name
-      value: "granite-3.3-2b-instruct"
+      value: "granite-2b"
     - name: processor
       value: "ibm-granite/granite-3.3-2b-instruct"
     - name: data-config
@@ -201,12 +256,24 @@ spec:
 EOF
 ----
 
+[NOTE]
+====
+**Important Notes:**
+* The `target` parameter should point to your deployed model's endpoint. If the model is not yet deployed, the `deploy-model` task will deploy it using the Helm chart specified in `valuesContent`.
+* The `lm-eval-job-name` must match the name in the LMEvalJob CR (e.g., `mmlu-jurisprudence-eval-job` from `mmlu.yaml`).
+* The LMEvalJob will be created in the `vllm` namespace (or the namespace specified in the job definition).
+* Ensure the model endpoint URL format matches: `http://<SERVICE_NAME>-predictor.<NAMESPACE>.svc.cluster.local:8080/v1`
+====
+
 === Custom Evaluation Run
 
-To run custom evaluation tasks:
+To run custom evaluation tasks with custom data:
 
 [source,bash]
 ----
+# First, upload your custom data file to the S3 'custom-data' bucket
+# Then create the PipelineRun:
+
 oc create -f - <<EOF
 apiVersion: tekton.dev/v1
 kind: PipelineRun
@@ -218,7 +285,7 @@ spec:
     name: guidellm-benchmark-pipeline
   params:
     - name: target
-      value: "http://<MODEL_SERVICE>.<NAMESPACE>.svc.cluster.local:8080/v1"
+      value: "http://my-model-predictor.vllm.svc.cluster.local:8080/v1"
     - name: model-name
       value: "my-custom-model"
     - name: processor
@@ -231,29 +298,62 @@ spec:
       value: "fixed"
     - name: rate
       value: "10.0"
+    - name: api-key
+      value: ""
+    - name: max-concurrency
+      value: "10"
+    - name: huggingface-token
+      value: ""
+    - name: s3-api-endpoint
+      value: "http://minio-service.s3-storage.svc.cluster.local:9000"
+    - name: s3-access-key-id
+      value: "minio"
+    - name: s3-secret-access-key
+      value: "minio123"
+    - name: model-url
+      value: "quay.io/<YOUR_ORG>/my-custom-model:latest"
+    - name: lm-eval-job-name
+      value: "custom-eval-job"
     - name: lm-eval-custom
       value: "True"
     - name: custom-data
       value: "True"
     - name: custom-filename
-      value: "my-custom-eval.json"
-    # ... (other parameters as above)
+      value: "my-custom-prompts.csv"
+    - name: model-reg-author
+      value: "ModelOps Team"
+    - name: valuesContent
+      value: |
+        deploymentMode: RawDeployment
+        fullnameOverride: "my-custom-model"
+        model:
+          modelNameOverride: "my-custom-model"
+          uri: "oci://quay.io/<YOUR_ORG>/my-custom-model:latest"
   workspaces:
     - name: shared-workspace
       persistentVolumeClaim:
         claimName: guidellm-output-pvc
     - name: manifests
       configMap:
-        name: custom-eval-manifest
+        name: mmlu-manifest
     - name: custom-mmlu
       configMap:
-        name: my-custom-mmlu
+        name: custom-mmlu
   taskRunTemplate:
     serviceAccountName: pipeline
   timeouts:
     pipeline: 2h0m0s
 EOF
 ----
+
+[NOTE]
+====
+**Custom Data Setup:**
+* Upload your custom prompt file (CSV, JSONL, etc.) to the S3 bucket named `custom-data` in MinIO
+* Set `custom-data: "True"` and provide the filename in `custom-filename`
+* The file will be downloaded from S3 during the benchmark task
+* For custom LM-Eval tasks, ensure your `custom-mmlu` ConfigMap contains the task definition and data files
+====
 
 == Pipeline Parameters Reference
 
@@ -302,8 +402,8 @@ EOF
 |``
 
 |`s3-api-endpoint`
-|S3 endpoint URL
-|`http://s3.openshift-storage.svc.cluster.local:80`
+|S3 endpoint URL (update to match your MinIO deployment)
+|`http://s3.openshift-storage.svc.cluster.local:80` (default) or `http://minio-service.s3-storage.svc.cluster.local:9000` (MinIO)
 
 |`s3-access-key-id`
 |S3 access key ID
@@ -401,10 +501,13 @@ oc logs -l tekton.dev/pipelineRun=<PIPELINERUN_NAME> \
   -l tekton.dev/pipelineTask=benchmark \
   -n modelcar-pipelines -f
 
-# LM-Eval task logs
+# LM-Eval task logs (this task creates LMEvalJob in vllm namespace)
 oc logs -l tekton.dev/pipelineRun=<PIPELINERUN_NAME> \
   -l tekton.dev/pipelineTask=lm-eval \
   -n modelcar-pipelines -f
+
+# Check LMEvalJob pod logs in vllm namespace
+oc logs -l job-name=<LMEVAL_JOB_NAME> -n vllm -f
 
 # Model registry task logs
 oc logs -l tekton.dev/pipelineRun=<PIPELINERUN_NAME> \
@@ -491,51 +594,77 @@ LM-Eval produces accuracy scores for various tasks:
 
 === Custom LM-Eval Task
 
-Create a ConfigMap with custom evaluation job:
+Create a custom LMEvalJob definition. The pipeline uses TrustyAI's LMEvalJob Custom Resource:
 
 [source,yaml]
 ----
-apiVersion: v1
-kind: ConfigMap
+apiVersion: trustyai.opendatahub.io/v1alpha1
+kind: LMEvalJob
 metadata:
-  name: my-custom-eval-manifest
-  namespace: modelcar-pipelines
-data:
-  eval-job.yaml: |
-    apiVersion: batch/v1
-    kind: Job
-    metadata:
-      name: my-custom-eval-job
-    spec:
-      template:
-        spec:
-          containers:
-          - name: lm-eval
-            image: ghcr.io/eleutherai/lm-evaluation-harness:latest
-            args:
-              - "--model"
-              - "vllm"
-              - "--model_args"
-              - "served_url=http://MODEL_SERVICE:8080/v1,model=MODEL_NAME"
-              - "--tasks"
-              - "my_custom_task"
-              - "--output_path"
-              - "/results/custom-eval-results.json"
-            volumeMounts:
-            - name: results
-              mountPath: /results
-          volumes:
-          - name: results
-            persistentVolumeClaim:
-              claimName: guidellm-output-pvc
-          restartPolicy: Never
+  name: custom-eval-job
+  namespace: vllm
+spec:
+  model: local-completions  # or local-chat-completions for chat models
+  taskList:
+    taskNames:
+      - custom-lmeval-task  # Your custom task name
+  modelArgs:
+    - name: model
+      value: granite-2b  # Your InferenceService name
+    - name: base_url
+      value: http://granite-2b-predictor.vllm.svc.cluster.local:8080/v1/completions
+    - name: include_path
+      value: /opt/app-root/src/my_tasks  # Path where task.yaml is mounted
+    - name: num_concurrent
+      value: '1'
+    - name: max_retries
+      value: '6'
+    - name: tokenized_requests
+      value: 'False'
+    - name: tokenizer
+      value: ibm-granite/granite-3.3-8b-instruct
+  logSamples: true
+  batchSize: '1'
+  allowOnline: true
+  allowCodeExecution: false
+  outputs:
+    pvcManaged:
+      size: 5Gi
+  pod:
+    volumes:
+      - name: custom-benchmark-volume
+        configMap:
+          name: custom-lmeval-benchmark-files
+    container:
+      volumeMounts:
+        - name: custom-benchmark-volume
+          mountPath: /opt/app-root/src/my_tasks/task.yaml
+          subPath: task.yaml
+          readOnly: true
+        - name: custom-benchmark-volume
+          mountPath: /opt/app-root/src/my_tasks/data.jsonl
+          subPath: data.jsonl
+          readOnly: true
 ----
 
-Apply the ConfigMap:
+Create the ConfigMap with your custom task files:
 
 [source,bash]
 ----
-oc apply -f my-custom-eval-manifest.yaml
+# Create ConfigMap with custom task definition and data
+oc create configmap custom-lmeval-benchmark-files \
+  --from-file=task.yaml=deploy/guidellm-pipeline/custom-lm-eval/task.yaml \
+  --from-file=data.jsonl=deploy/guidellm-pipeline/custom-lm-eval/data.jsonl \
+  -n vllm
+
+# Update the custom-mmlu ConfigMap in pipeline namespace
+oc create configmap custom-mmlu \
+  --from-file=custom-mmlu.yaml=my-custom-eval-job.yaml \
+  --from-file=task.yaml=deploy/guidellm-pipeline/custom-lm-eval/task.yaml \
+  --from-file=custom-task.yaml=deploy/guidellm-pipeline/custom-lm-eval/custom-task.yaml \
+  --from-file=data.jsonl=deploy/guidellm-pipeline/custom-lm-eval/data.jsonl \
+  -n modelcar-pipelines \
+  --dry-run=client -o yaml | oc apply -f -
 ----
 
 === Custom Dataset
@@ -617,20 +746,28 @@ oc run aws-cli --rm -it --image=amazon/aws-cli -- \
 
 === LM-Eval Job Fails
 
-Check the Job status and logs:
+Check the LMEvalJob status and logs:
 
 [source,bash]
 ----
-# List jobs
-oc get jobs -n modelcar-pipelines
+# List LMEvalJobs (in vllm namespace, not pipeline namespace)
+oc get lmevaljob -n vllm
 
-# Check job logs
-oc logs job/<JOB_NAME> -n modelcar-pipelines
+# Check LMEvalJob status
+oc describe lmevaljob <JOB_NAME> -n vllm
+
+# Check the pod created by LMEvalJob
+oc get pods -n vllm | grep <JOB_NAME>
+
+# Check pod logs
+oc logs <POD_NAME> -n vllm
 
 # Common issues:
-# - Missing Hugging Face token for gated models
+# - Missing Hugging Face token for gated models (set in LMEvalJob spec)
 # - Insufficient memory for large models
-# - Invalid task configuration
+# - Invalid task configuration in ConfigMap
+# - Model endpoint not accessible from vllm namespace
+# - Missing custom task files in ConfigMap
 ----
 
 == Best Practices

@@ -37,8 +37,52 @@ Create a PersistentVolumeClaim for pipeline workspace:
 oc apply -f deploy/openshift/modelcar-storage.yaml -n modelcar-pipelines
 ----
 
-This creates a PVC named `modelcar-workspace-pvc` for storing model files during pipeline execution.
+This creates a PVC named `modelcar-storage` for storing model files during pipeline execution.
 
+=== Create Required ConfigMaps
+
+The pipeline requires ConfigMaps for compression and registration scripts:
+
+[source,bash]
+----
+# Create compress-script ConfigMap
+oc create configmap compress-script \
+  --from-file=compress.py=deploy/tasks/compress/compress.py \
+  -n modelcar-pipelines
+
+# Create register-script ConfigMap
+oc create configmap register-script \
+  --from-file=register.py=deploy/tasks/register-with-registry/register.py \
+  -n modelcar-pipelines
+----
+
+=== Create ServiceAccount and RBAC
+
+The pipeline needs a ServiceAccount with permissions to create InferenceServices and ServingRuntimes:
+
+[source,bash]
+----
+# Create ServiceAccount
+oc create serviceaccount modelcar-pipeline -n modelcar-pipelines
+
+# Apply RBAC permissions
+oc apply -f deploy/openshift/role.yaml -n modelcar-pipelines
+oc apply -f deploy/openshift/role-binding.yaml -n modelcar-pipelines
+----
+
+=== Deploy Pipeline Tasks
+
+Deploy the individual Tekton tasks that the pipeline references:
+
+[source,bash]
+----
+# Deploy all required tasks
+oc apply -f deploy/openshift/modelcar-compress-task.yaml -n modelcar-pipelines
+oc apply -f deploy/openshift/modelcar-evaluate-task.yaml -n modelcar-pipelines
+oc apply -f deploy/openshift/modelcar-guidellm-containerized-task.yaml -n modelcar-pipelines
+oc apply -f deploy/openshift/modelcar-multilang-evaluate-task.yaml -n modelcar-pipelines
+oc apply -f deploy/openshift/modelcar-trustyai-task.yaml -n modelcar-pipelines
+----
 
 === Deploy Main Pipeline
 
@@ -57,6 +101,8 @@ Check that all tasks and the pipeline are created:
 ----
 oc get tasks -n modelcar-pipelines
 oc get pipelines -n modelcar-pipelines
+oc get configmaps -n modelcar-pipelines | grep -E "(compress-script|register-script)"
+oc get serviceaccount modelcar-pipeline -n modelcar-pipelines
 ----
 
 == Running the ModelCar Pipeline
@@ -90,7 +136,7 @@ spec:
   workspaces:
     - name: shared-workspace
       persistentVolumeClaim:
-        claimName: modelcar-workspace-pvc
+        claimName: modelcar-storage
     - name: quay-auth-workspace
       secret:
         secretName: quay-auth-secret
@@ -128,7 +174,7 @@ spec:
   workspaces:
     - name: shared-workspace
       persistentVolumeClaim:
-        claimName: modelcar-workspace-pvc
+        claimName: modelcar-storage
     - name: quay-auth-workspace
       secret:
         secretName: quay-auth-secret
@@ -176,7 +222,7 @@ spec:
   workspaces:
     - name: shared-workspace
       persistentVolumeClaim:
-        claimName: modelcar-workspace-pvc
+        claimName: modelcar-storage
     - name: quay-auth-workspace
       secret:
         secretName: quay-auth-secret
@@ -212,7 +258,7 @@ spec:
   workspaces:
     - name: shared-workspace
       persistentVolumeClaim:
-        claimName: modelcar-workspace-pvc
+        claimName: modelcar-storage
     - name: quay-auth-workspace
       secret:
         secretName: quay-auth-secret
@@ -289,10 +335,20 @@ The ModelCar pipeline supports the following parameters:
 |No
 |`false`
 
+|`LANGUAGES`
+|Comma-separated list of languages to evaluate (`en,es,ja`)
+|No
+|`en,es,ja`
+
 |`TRUSTYAI_EVALUATE_MODEL`
 |Whether to run TrustyAI evaluation (`true`/`false`)
 |No
 |`false`
+
+|`TRUSTYAI_SERVICE_URL`
+|TrustyAI service endpoint URL
+|No
+|`http://trustyai-service:8080`
 
 |`S3_ENABLED`
 |Whether to upload results to S3 (`true`/`false`)

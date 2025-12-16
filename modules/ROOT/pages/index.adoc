@@ -22,7 +22,7 @@ This solution is broken down into **four distinct, manual phases**. This design 
 
 == 🎯 Who Is This For?
 
-We built this specifically for the people building atoken generation platform used to build Gen AI powered applications:
+We built this specifically for the people building a token generation platform used to build Gen AI powered applications:
 
 * **Platform Engineers (Primary):** You need to provide a robust service to your Gen AI development teams. This guide shows you how to build the infrastructure for model evaluation.
 * **Service Consultants:** You are delivering OpenShift AI solutions to customers. Use this kit as a reference architecture or a base for your delivery engagements.
@@ -85,6 +85,6 @@ Before starting Phase 1, ensure you have the following:
 
 == Let's Get Started
 
-Ready to build the foundation?
+// Ready to build the foundation?
 
-* xref:phase-1:index.adoc[Start with Phase 1: Package & Register]
+// * xref:phase-1:index.adoc[Start with Phase 1: Package & Register]

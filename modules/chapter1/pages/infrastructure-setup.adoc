@@ -55,7 +55,7 @@ oc apply -f deploy/model-registry/mysql-service.yaml
 [WARNING]
 .Security Notice
 ====
-The default `mysql-secret.yaml` uses generic passwords (`mysql123`). For a production deployment, please rotate these credentials immediately.
+The default `mysql-secret.yaml` uses generic passwords (`mysql-admin`). For a production deployment, please rotate these credentials immediately.
 ====
 
 === Connect RHOAI to MySQL
@@ -92,7 +92,7 @@ oc get route -n s3-storage | grep s3-ui
 [WARNING]
 .Security Notice
 ====
-The default `minio-backend.yaml` uses generic passwords (`xxxx123`). For a production deployment, please rotate these credentials immediately.
+The default `minio-backend.yaml` uses generic passwords (`minio123`). For a production deployment, please rotate these credentials immediately.
 ====
 
 Open the route to the MinIO Console (User: `minio`, Pass: `minio123`) and create these four buckets:
@@ -107,15 +107,15 @@ Open the route to the MinIO Console (User: `minio`, Pass: `minio123`) and create
 
 We use Quay to store our ModelCar images. If you don't have a corporate Quay instance, we will deploy a lightweight standalone version.
 
-=== Update the quay/quay-config-secret-rados hostname with the Minio API route.
+ . Update the `deploy/quay/quay-config-secret-rados.yaml` hostname with the Minio API route.
 
-Get the Minio API route:
-[source,bash]
-----
- oc get route -n s3-storage | grep minio-api
-----
+ Get the Minio API route:
+ [source,bash]
+ ----
+  oc get route -n s3-storage | grep minio-api
+ ----
 
-==== Replace the <REPLACE_ME_WITH_MINIO_API_ROUTE> with the Minio API route from the previous step. No need to add http/https or the port. For example, your hostname should look similar to: minio-api-s3-storage.apps.cluster-11111.22222.com
+. Replace the *<REPLACE_ME_WITH_MINIO_API_ROUTE>* with the Minio API route from the previous step. No need to add http/https or the port. For example, your hostname should look similar to: *minio-api-s3-storage.apps.cluster-11111.22222.com*
 
 [source,bash]
 ----
@@ -132,7 +132,7 @@ stringData:
         - access_key: 'minio'
           secret_key: 'minio123'
           bucket_name: 'quay-registry-bucket'
-          hostname: *'<REPLACE_ME_WITH_MINIO_API_ROUTE>'*
+          hostname: '<REPLACE_ME_WITH_MINIO_API_ROUTE>'
           is_secure: true
           #port: '9000'
           storage_path: /datastorage/registry
@@ -150,7 +150,7 @@ stringData:
 # 1. Create Namespace & Install Operator
 oc new-project quay-registry
 oc apply -f deploy/quay/operator-group.yaml -n quay-registry
-oc apply -f quay/quay-config-secret-rados.yaml -n quay-registry
+oc apply -f deploy/quay/quay-config-secret-rados.yaml -n quay-registry
 oc apply -f deploy/quay/subscription.yaml -n quay-registry
 
 # 2. Wait for Operator (approx 30s)
@@ -166,9 +166,9 @@ To allow our pipelines to push images, we need a **Robot Account**.
 . Open the Quay UI (`oc get route -n quay-registry`) in a web browser.
 . Select *Create Account*
 . Create an Account:
-.. username:  admin
-.. email address: admin@admin.com
-.. admin123
+.. username: `admin`
+.. email address: `admin@admin.com`
+.. password: `admin123`
 
 
 . Create a Robot Account (`amep-builder`) with **Write** permissions.
