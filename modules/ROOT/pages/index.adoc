@@ -22,7 +22,7 @@ This solution is broken down into **four distinct, manual phases**. This design 
 
 == 🎯 Who Is This For?
 
-We built this specifically for the people building a token generation platform used to build Gen AI powered applications:
+We built this specifically for the people building a token generation platform used by Gen AI powered applications:
 
 * **Platform Engineers (Primary):** You need to provide a robust service to your Gen AI development teams. This guide shows you how to build the infrastructure for model evaluation.
 * **Service Consultants:** You are delivering OpenShift AI solutions to customers. Use this kit as a reference architecture or a base for your delivery engagements.
@@ -76,7 +76,7 @@ This solution utilizes standard, cloud-native components available in OpenShift 
 
 == 🚀 Prerequisites
 
-Before starting Phase 1, ensure you have the following:
+Before starting, ensure you have the following:
 
 * [ ] Access to an **OpenShift AI 3.0+** cluster.
 * [ ] **Cluster Admin** privileges (required for setting up initial ServingRuntimes).

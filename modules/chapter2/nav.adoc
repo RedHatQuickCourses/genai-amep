@@ -1,5 +1,0 @@
-* xref:index.adoc[Model Deployment]
-** xref:deployment-overview.adoc[Deployment Overview]
-//** xref:infrastructure-setup.adoc[Infrastructure Setup]
-** xref:modelcar-pipeline.adoc[ModelCar Pipeline Deployment]
-** xref:evaluation-pipeline.adoc[Evaluation Pipeline Deployment]

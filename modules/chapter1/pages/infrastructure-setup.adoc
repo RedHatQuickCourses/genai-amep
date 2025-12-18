@@ -9,7 +9,7 @@ Before we can treat models like software, we need the "Factory Floor." This sect
 [NOTE]
 .Existing Infrastructure?
 ====
-If you already have access to an S3 bucket, an Image Registry (Quay), and the OpenShift AI Model Registry, you can **skip this page** and proceed to xref:phase-1:index.adoc[Phase 1].
+If you already have access to an S3 bucket, an Image Registry (Quay), and the OpenShift AI Model Registry, you can **skip this page** and proceed to xref:modelcar-pipeline.adoc:index.adoc[Model pipeline deployment].
 ====
 
 == 🏗️ Architecture Overview
@@ -42,7 +42,7 @@ OpenShift AI 3.0 includes the Model Registry, but it requires a database backend
 
 [source,bash]
 ----
-# 1. Create Namespace
+# 1. Create Namespace (OpenShift Project)
 oc new-project rhoai-model-registries
 
 # 2. Deploy MySQL (Non-HA for Demo)
@@ -187,6 +187,6 @@ oc get pods -n rhoai-model-registries -l app=mysql
 oc get pods -n s3-storage -l app=minio
 ----
 
-If all pods are `Running`, you are ready to start **Phase 1**.
+If all pods are `Running`, you are ready to start **Building Modelcar container images**.
 
-xref:phase-1:index.adoc[👉 Go to Phase 1: Package & Register]
+xref:modelcar-pipeline.adoc:index.adoc[👉 Go to Modelcar-pipeline]
