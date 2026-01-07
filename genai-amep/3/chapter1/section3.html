@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width,initial-scale=1">
-    <title>Section 3 :: Automated Multi Language LLM Evaluation Pipeline</title>
+    <title>The secret name usually follows the pattern &lt;model-name&gt;-sa-token :: Automated Multi Language LLM Evaluation Pipeline</title>
     <meta name="generator" content="Antora 3.1.3">
     <link rel="stylesheet" href="../../../_/css/site.css">
     <script>var uiRootPath = '../../../_'</script>
@@ -54,6 +54,9 @@
     <a class="nav-link" href="modelcar-pipeline.html">ModelCar Pipeline Deployment</a>
   </li>
   <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="benchmark-pipeline.html">Benchmark Pipeline Deployment</a>
+  </li>
+  <li class="nav-item" data-depth="2">
     <a class="nav-link" href="evaluation-pipeline.html">Evaluation Pipeline Deployment</a>
   </li>
   <li class="nav-item" data-depth="2">
@@ -92,7 +95,7 @@
 <nav class="breadcrumbs" aria-label="breadcrumbs">
   <ul>
     <li><a href="../index.html">Automated Multi-Language LLM Evaluation Pipeline</a></li>
-    <li><a href="section3.html">Section 3</a></li>
+    <li><a href="section3.html">The secret name usually follows the pattern &lt;model-name&gt;-sa-token</a></li>
   </ul>
 </nav>
 </div>
@@ -101,9 +104,53 @@
   <div class="toc-menu"></div>
 </aside>
 <article class="doc">
-<h1 class="page">Section 3</h1>
+<h1 class="page">The secret name usually follows the pattern &lt;model-name&gt;-sa-token</h1>
 <div class="paragraph">
-<p>This is <em>Section 3</em> of <em>Chapter 1</em> in the <strong>hello</strong> quick course&#8230;&#8203;.</p>
+<p>export INFERENCE_URL=$http://a0ed0be8f4d804438bf7411d85f32fcc-2012662907.us-east-2.elb.amazonaws.com/my-ai-lab/qwen
+echo "Targeting: <a href="https://$INFERENCE_URL"" class="bare">https://$INFERENCE_URL"</a></p>
+</div>
+<div class="paragraph">
+<p>time curl -k -X POST "http://a0ed0be8f4d804438bf7411d85f32fcc-2012662907.us-east-2.elb.amazonaws.com/my-ai-lab/qwen/v1/chat/completions" \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "Qwen/Qwen3-0.6B",
+    "messages": [
+      {"role": "system", "content": "You are a helpful assistant talking about OpenShift AI."},
+      {"role": "user", "content": "Explain Kubernetes in 50 words."}
+    ]
+  }'</p>
+</div>
+<div class="paragraph">
+<p>INFERENCE_URL=$(
+  oc -n openshift-ingress get gateway openshift-ai-inference \
+    -o jsonpath='{.status.addresses[0].value}'
+)</p>
+</div>
+<div class="paragraph">
+<p>LLM=qwen-kserve
+LLM_SVC=${LLM##*/}</p>
+</div>
+<div class="paragraph">
+<p>PROMPT="Explain the difference between supervised and unsupervised learning in machine learning. Include examples of algorithms used in each type."</p>
+</div>
+<div class="paragraph">
+<p>llm_post_data(){
+cat &lt;&lt;JSON
+{
+  "model": "${LLM}",
+  "prompt": "${PROMPT}",
+  "max_tokens": 200,
+  "temperature": 0.7,
+  "top_p": 0.9
+}
+JSON
+}</p>
+</div>
+<div class="paragraph">
+<p>curl -s -X POST <a href="http://a0ed0be8f4d804438bf7411d85f32fcc-2012662907.us-east-2.elb.amazonaws.com/my-ai-lab/qwen/v1/chat/completions" class="bare">http://a0ed0be8f4d804438bf7411d85f32fcc-2012662907.us-east-2.elb.amazonaws.com/my-ai-lab/qwen/v1/chat/completions</a> \
+  -H "Content-Type: application/json" \
+  -d "$(llm_post_data)" | jq .choices[0].text</p>
 </div>
 </article>
   </div>

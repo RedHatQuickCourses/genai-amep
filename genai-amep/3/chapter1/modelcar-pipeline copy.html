@@ -4,8 +4,6 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width,initial-scale=1">
     <title>ModelCar Pipeline Deployment :: Automated Multi Language LLM Evaluation Pipeline</title>
-    <link rel="prev" href="infrastructure-setup.html">
-    <link rel="next" href="benchmark-pipeline.html">
     <meta name="generator" content="Antora 3.1.3">
     <link rel="stylesheet" href="../../../_/css/site.css">
     <script>var uiRootPath = '../../../_'</script>
@@ -52,7 +50,7 @@
   <li class="nav-item" data-depth="2">
     <a class="nav-link" href="infrastructure-setup.html">Infrastructure setup</a>
   </li>
-  <li class="nav-item is-current-page" data-depth="2">
+  <li class="nav-item" data-depth="2">
     <a class="nav-link" href="modelcar-pipeline.html">ModelCar Pipeline Deployment</a>
   </li>
   <li class="nav-item" data-depth="2">
@@ -97,8 +95,7 @@
 <nav class="breadcrumbs" aria-label="breadcrumbs">
   <ul>
     <li><a href="../index.html">Automated Multi-Language LLM Evaluation Pipeline</a></li>
-    <li><a href="index.html">Platform preparation</a></li>
-    <li><a href="modelcar-pipeline.html">ModelCar Pipeline Deployment</a></li>
+    <li><a href="modelcar-pipeline%20copy.html">ModelCar Pipeline Deployment</a></li>
   </ul>
 </nav>
 </div>
@@ -111,7 +108,7 @@
 <div id="preamble">
 <div class="sectionbody">
 <div class="paragraph">
-<p>This guide covers the deployment and usage of the ModelCar pipeline, which automates the downloading, storage, and registration of AI models in OpenShift AI.</p>
+<p>This guide covers the deployment and usage of the ModelCar pipeline, which automates the packaging of AI models as OCI images on OpenShift AI.</p>
 </div>
 </div>
 </div>
@@ -119,7 +116,7 @@
 <h2 id="_overview"><a class="anchor" href="#_overview"></a>Overview</h2>
 <div class="sectionbody">
 <div class="paragraph">
-<p>The ModelCar pipeline automates the workflow of downloading models from Hugging Face, storing them in S3-compatible storage, and registering them in the RHOAI Model Registry. It uses Tekton to orchestrate the following tasks:</p>
+<p>The ModelCar pipeline automates the workflow of downloading, optionally compressing, packaging, and registering AI models in the RHOAI Model Registry. It uses Tekton to orchestrate the following tasks:</p>
 </div>
 <div class="olist arabic">
 <ol class="arabic">
@@ -133,7 +130,10 @@
 <p>Compress model (optional)</p>
 </li>
 <li>
-<p>Upload model to S3 storage (under <code>model-data/</code> folder)</p>
+<p>Build ModelCar OCI image using OLOT</p>
+</li>
+<li>
+<p>Push image to Quay registry</p>
 </li>
 <li>
 <p>Register model in RHOAI Model Registry</p>
@@ -151,7 +151,7 @@
 <div class="ulist">
 <ul>
 <li>
-<p><a href="infrastructure-setup.html" class="xref page">Infrastructure Setup</a> - S3 Storage and Model Registry deployed</p>
+<p><a href="infrastructure-setup.html" class="xref page">Infrastructure Setup</a> - Quay and Model Registry deployed</p>
 </li>
 <li>
 <p>Pipeline namespace created (e.g., <code>modelcar-pipelines</code>)</p>
@@ -161,10 +161,10 @@
 <div class="ulist">
 <ul>
 <li>
-<p><code>s3-credentials</code> - S3 access credentials (AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY)</p>
+<p><code>quay-auth-secret</code> - Quay robot account credentials</p>
 </li>
 <li>
-<p><code>huggingface-secret</code> - Hugging Face token (for gated models, optional)</p>
+<p><code>huggingface-secret</code> - Hugging Face token (for gated models)</p>
 </li>
 </ul>
 </div>
@@ -194,35 +194,20 @@
 </div>
 </div>
 <div class="sect2">
-<h3 id="_create_s3_credentials_secret"><a class="anchor" href="#_create_s3_credentials_secret"></a>Create S3 Credentials Secret</h3>
-<div class="paragraph">
-<p>The pipeline requires S3 credentials for uploading models:</p>
-</div>
-<div class="listingblock">
-<div class="content">
-<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash"># Create S3 credentials secret
-oc create secret generic s3-credentials \
-  --from-literal=AWS_ACCESS_KEY_ID=&lt;YOUR_ACCESS_KEY&gt; \
-  --from-literal=AWS_SECRET_ACCESS_KEY=&lt;YOUR_SECRET_KEY&gt; \
-  -n modelcar-pipelines</code></pre>
-</div>
-</div>
-</div>
-<div class="sect2">
 <h3 id="_create_required_configmaps"><a class="anchor" href="#_create_required_configmaps"></a>Create Required ConfigMaps</h3>
 <div class="paragraph">
 <p>The pipeline requires ConfigMaps for compression and registration scripts:</p>
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash"># Create compress-script ConfigMap (optional, only if using compression)
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash"># Create compress-script ConfigMap
 oc create configmap compress-script \
   --from-file=compress.py=deploy/tasks/compress/compress.py \
   -n modelcar-pipelines
 
-# Create S3 registration script ConfigMap
-oc create configmap register-s3-script \
-  --from-file=register_s3_model.py=deploy/tasks/register-with-registry/register_s3_model.py \
+# Create register-script ConfigMap
+oc create configmap register-script \
+  --from-file=register.py=deploy/tasks/register-with-registry/register.py \
   -n modelcar-pipelines</code></pre>
 </div>
 </div>
@@ -246,7 +231,7 @@ oc create serviceaccount modelcar-pipeline -n modelcar-pipelines</code></pre>
 </td>
 <td class="content">
 <div class="paragraph">
-<p>The ModelCar pipeline stores models in S3 and registers them in the Model Registry. For model deployment and evaluation, use the <a href="benchmark-pipeline.html" class="xref page">Benchmark Pipeline</a>.</p>
+<p>The ModelCar pipeline focuses solely on packaging and registration. For model deployment and evaluation, use the <a href="benchmark-pipeline.html" class="xref page">Benchmark Pipeline</a>.</p>
 </div>
 </td>
 </tr>
@@ -298,7 +283,7 @@ oc get serviceaccount modelcar-pipeline -n modelcar-pipelines</code></pre>
 <div class="sect2">
 <h3 id="_basic_pipeline_run"><a class="anchor" href="#_basic_pipeline_run"></a>Basic Pipeline Run</h3>
 <div class="paragraph">
-<p>To download a model from Hugging Face and store it in S3:</p>
+<p>To package a model from Hugging Face:</p>
 </div>
 <div class="listingblock">
 <div class="content">
@@ -314,43 +299,29 @@ spec:
   params:
     - name: HUGGINGFACE_MODEL
       value: "ibm-granite/granite-3.3-2b-instruct"
+    - name: OCI_IMAGE
+      value: "quay.io/&lt;YOUR_ORG&gt;/granite-3.3-2b-instruct"
     - name: MODEL_NAME
       value: "granite-3.3-2b-instruct"
     - name: MODEL_VERSION
       value: "1.0.0"
     - name: MODEL_REGISTRY_URL
       value: "http://mysql.rhoai-model-registries.svc.cluster.local:3306"
-    - name: S3_BUCKET
-      value: "models"
-    - name: S3_ENDPOINT_URL
-      value: "http://minio.minio.svc.cluster.local:9000"
   workspaces:
     - name: shared-workspace
       persistentVolumeClaim:
         claimName: modelcar-storage
-    - name: s3-credentials
+    - name: quay-auth-workspace
       secret:
-        secretName: s3-credentials
+        secretName: quay-auth-secret
 EOF</code></pre>
 </div>
-</div>
-<div class="admonitionblock note">
-<table>
-<tr>
-<td class="icon">
-<i class="fa icon-note" title="Note"></i>
-</td>
-<td class="content">
-The model will be uploaded to S3 at the path: <code>s3://models/model-data/granite-3.3-2b-instruct/1.0.0/</code>
-</td>
-</tr>
-</table>
 </div>
 </div>
 <div class="sect2">
 <h3 id="_pipeline_with_model_compression"><a class="anchor" href="#_pipeline_with_model_compression"></a>Pipeline with Model Compression</h3>
 <div class="paragraph">
-<p>To compress the model before uploading to S3:</p>
+<p>To compress the model before packaging:</p>
 </div>
 <div class="listingblock">
 <div class="content">
@@ -366,6 +337,8 @@ spec:
   params:
     - name: HUGGINGFACE_MODEL
       value: "ibm-granite/granite-3.3-8b-instruct"
+    - name: OCI_IMAGE
+      value: "quay.io/&lt;YOUR_ORG&gt;/granite-3.3-8b-instruct-compressed"
     - name: MODEL_NAME
       value: "granite-3.3-8b-instruct-compressed"
     - name: MODEL_VERSION
@@ -374,17 +347,13 @@ spec:
       value: "true"
     - name: MODEL_REGISTRY_URL
       value: "http://mysql.rhoai-model-registries.svc.cluster.local:3306"
-    - name: S3_BUCKET
-      value: "models"
-    - name: S3_ENDPOINT_URL
-      value: "http://minio.minio.svc.cluster.local:9000"
   workspaces:
     - name: shared-workspace
       persistentVolumeClaim:
         claimName: modelcar-storage
-    - name: s3-credentials
+    - name: quay-auth-workspace
       secret:
-        secretName: s3-credentials
+        secretName: quay-auth-secret
 EOF</code></pre>
 </div>
 </div>
@@ -392,18 +361,7 @@ EOF</code></pre>
 <div class="sect2">
 <h3 id="_pipeline_with_gated_model"><a class="anchor" href="#_pipeline_with_gated_model"></a>Pipeline with Gated Model</h3>
 <div class="paragraph">
-<p>For gated models requiring authentication, first create the HuggingFace secret:</p>
-</div>
-<div class="listingblock">
-<div class="content">
-<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash"># Create HuggingFace token secret
-oc create secret generic huggingface-secret \
-  --from-literal=HUGGINGFACE_TOKEN=&lt;YOUR_HF_TOKEN&gt; \
-  -n modelcar-pipelines</code></pre>
-</div>
-</div>
-<div class="paragraph">
-<p>Then run the pipeline:</p>
+<p>For gated models requiring authentication:</p>
 </div>
 <div class="listingblock">
 <div class="content">
@@ -419,23 +377,21 @@ spec:
   params:
     - name: HUGGINGFACE_MODEL
       value: "meta-llama/Llama-3.2-3B-Instruct"
+    - name: OCI_IMAGE
+      value: "quay.io/&lt;YOUR_ORG&gt;/llama-3.2-3b-instruct"
     - name: MODEL_NAME
       value: "llama-3.2-3b-instruct"
     - name: MODEL_VERSION
       value: "1.0.0"
     - name: MODEL_REGISTRY_URL
       value: "http://mysql.rhoai-model-registries.svc.cluster.local:3306"
-    - name: S3_BUCKET
-      value: "models"
-    - name: S3_ENDPOINT_URL
-      value: "http://minio.minio.svc.cluster.local:9000"
   workspaces:
     - name: shared-workspace
       persistentVolumeClaim:
         claimName: modelcar-storage
-    - name: s3-credentials
+    - name: quay-auth-workspace
       secret:
-        secretName: s3-credentials
+        secretName: quay-auth-secret
 EOF</code></pre>
 </div>
 </div>
@@ -446,7 +402,7 @@ EOF</code></pre>
 <i class="fa icon-note" title="Note"></i>
 </td>
 <td class="content">
-The <code>huggingface-secret</code> must contain a valid token with access to the gated model.
+Ensure the <code>huggingface-secret</code> contains a valid token with access to the gated model.
 </td>
 </tr>
 </table>
@@ -483,6 +439,12 @@ The <code>huggingface-secret</code> must contain a valid token with access to th
 <td class="tableblock halign-left valign-top"><p class="tableblock">N/A</p></td>
 </tr>
 <tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>OCI_IMAGE</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Destination OCI image (e.g., <code>quay.io/org/model:tag</code>)</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Yes</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">N/A</p></td>
+</tr>
+<tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>HUGGINGFACE_ALLOW_PATTERNS</code></p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">File patterns to download (e.g., <code>"<strong>.safetensors", "</strong>.json"</code>)</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">No</p></td>
@@ -511,18 +473,6 @@ The <code>huggingface-secret</code> must contain a valid token with access to th
 <td class="tableblock halign-left valign-top"><p class="tableblock">URL of the model registry service</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">Yes</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">N/A</p></td>
-</tr>
-<tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>S3_BUCKET</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">S3 bucket name for model storage</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Yes</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>models</code></p></td>
-</tr>
-<tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>S3_ENDPOINT_URL</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">S3 endpoint URL (for MinIO or S3-compatible storage)</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">No</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">``</p></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>DEPLOY_MODEL</code></p></td>
@@ -671,7 +621,7 @@ oc logs -l tekton.dev/pipelineRun=&lt;PIPELINERUN_NAME&gt; \
 <p>The pipeline uses several custom container images that must be built and pushed to your registry:</p>
 </div>
 <div class="sect2">
-<h3 id="_hugging_face_model_downloader"><a class="anchor" href="#_hugging_face_model_downloader"></a>Hugging Face Model Downloader</h3>
+<h3 id="_hugging_face_modelcar_builder"><a class="anchor" href="#_hugging_face_modelcar_builder"></a>Hugging Face ModelCar Builder</h3>
 <div class="paragraph">
 <p>Location: <code>deploy/tasks/huggingface-modelcar-builder/</code></p>
 </div>
@@ -686,22 +636,22 @@ podman push quay.io/&lt;YOUR_ORG&gt;/huggingface-modelcar-builder:latest</code><
 </div>
 </div>
 <div class="sect2">
-<h3 id="_s3_uploader"><a class="anchor" href="#_s3_uploader"></a>S3 Uploader</h3>
+<h3 id="_modelcar_builder"><a class="anchor" href="#_modelcar_builder"></a>ModelCar Builder</h3>
 <div class="paragraph">
-<p>Location: <code>deploy/tasks/s3-integration/</code></p>
+<p>Location: <code>deploy/tasks/build-and-push-modelcar/</code></p>
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">cd deploy/tasks/s3-integration
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">cd deploy/tasks/build-and-push-modelcar
 podman build --platform linux/amd64 \
-  -t quay.io/&lt;YOUR_ORG&gt;/s3-uploader:latest \
+  -t quay.io/&lt;YOUR_ORG&gt;/modelcar-builder:latest \
   -f Containerfile .
-podman push quay.io/&lt;YOUR_ORG&gt;/s3-uploader:latest</code></pre>
+podman push quay.io/&lt;YOUR_ORG&gt;/modelcar-builder:latest</code></pre>
 </div>
 </div>
 </div>
 <div class="sect2">
-<h3 id="_model_registry_integration"><a class="anchor" href="#_model_registry_integration"></a>Model Registry Integration</h3>
+<h3 id="_modelcar_registry_integration"><a class="anchor" href="#_modelcar_registry_integration"></a>ModelCar Registry Integration</h3>
 <div class="paragraph">
 <p>Location: <code>deploy/tasks/register-with-registry/</code></p>
 </div>
@@ -748,18 +698,17 @@ oc get secret huggingface-secret -n modelcar-pipelines
 </div>
 </div>
 <div class="sect2">
-<h3 id="_pipeline_run_fails_at_s3_upload_step"><a class="anchor" href="#_pipeline_run_fails_at_s3_upload_step"></a>Pipeline Run Fails at S3 Upload Step</h3>
+<h3 id="_pipeline_run_fails_at_push_step"><a class="anchor" href="#_pipeline_run_fails_at_push_step"></a>Pipeline Run Fails at Push Step</h3>
 <div class="paragraph">
-<p>Check S3 credentials and connectivity:</p>
+<p>Check Quay authentication:</p>
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash"># Verify S3 secret exists
-oc get secret s3-credentials -n modelcar-pipelines
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash"># Verify Quay secret exists
+oc get secret quay-auth-secret -n modelcar-pipelines
 
-# Test S3 connectivity (from a test pod)
-oc run s3-test --rm -it --image=amazon/aws-cli -n modelcar-pipelines -- \
-  s3 ls s3://&lt;BUCKET_NAME&gt; --endpoint-url=&lt;S3_ENDPOINT_URL&gt;</code></pre>
+# Test Quay login
+podman login &lt;QUAY_ROUTE&gt; --authfile=/path/to/auth.json</code></pre>
 </div>
 </div>
 </div>
@@ -814,10 +763,6 @@ oc edit pipeline modelcar-pipeline -n modelcar-pipelines
 </div>
 </div>
 </div>
-<nav class="pagination">
-  <span class="prev"><a href="infrastructure-setup.html">Infrastructure setup</a></span>
-  <span class="next"><a href="benchmark-pipeline.html">Benchmark Pipeline Deployment</a></span>
-</nav>
 </article>
   </div>
 </main>

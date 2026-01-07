@@ -3,9 +3,9 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width,initial-scale=1">
-    <title>Evaluation Pipeline Deployment :: Automated Multi Language LLM Evaluation Pipeline</title>
-    <link rel="prev" href="benchmark-pipeline.html">
-    <link rel="next" href="results-analysis.html">
+    <title>Benchmark Pipeline Deployment :: Automated Multi Language LLM Evaluation Pipeline</title>
+    <link rel="prev" href="modelcar-pipeline.html">
+    <link rel="next" href="evaluation-pipeline.html">
     <meta name="generator" content="Antora 3.1.3">
     <link rel="stylesheet" href="../../../_/css/site.css">
     <script>var uiRootPath = '../../../_'</script>
@@ -55,10 +55,10 @@
   <li class="nav-item" data-depth="2">
     <a class="nav-link" href="modelcar-pipeline.html">ModelCar Pipeline Deployment</a>
   </li>
-  <li class="nav-item" data-depth="2">
+  <li class="nav-item is-current-page" data-depth="2">
     <a class="nav-link" href="benchmark-pipeline.html">Benchmark Pipeline Deployment</a>
   </li>
-  <li class="nav-item is-current-page" data-depth="2">
+  <li class="nav-item" data-depth="2">
     <a class="nav-link" href="evaluation-pipeline.html">Evaluation Pipeline Deployment</a>
   </li>
   <li class="nav-item" data-depth="2">
@@ -98,7 +98,7 @@
   <ul>
     <li><a href="../index.html">Automated Multi-Language LLM Evaluation Pipeline</a></li>
     <li><a href="index.html">Platform preparation</a></li>
-    <li><a href="evaluation-pipeline.html">Evaluation Pipeline Deployment</a></li>
+    <li><a href="benchmark-pipeline.html">Benchmark Pipeline Deployment</a></li>
   </ul>
 </nav>
 </div>
@@ -107,11 +107,11 @@
   <div class="toc-menu"></div>
 </aside>
 <article class="doc">
-<h1 class="page">Evaluation Pipeline Deployment</h1>
+<h1 class="page">Benchmark Pipeline Deployment</h1>
 <div id="preamble">
 <div class="sectionbody">
 <div class="paragraph">
-<p>This guide covers the deployment and usage of the GuideLLM evaluation pipeline for comprehensive model assessment on OpenShift AI.</p>
+<p>This guide covers the deployment and usage of the GuideLLM benchmark evaluation pipeline for comprehensive model assessment on OpenShift AI.</p>
 </div>
 </div>
 </div>
@@ -119,10 +119,10 @@
 <h2 id="_overview"><a class="anchor" href="#_overview"></a>Overview</h2>
 <div class="sectionbody">
 <div class="paragraph">
-<p>The evaluation pipeline provides automated testing and benchmarking of deployed models. It works in conjunction with the <a href="modelcar-pipeline.html" class="xref page">ModelCar Pipeline</a> to evaluate models that have been packaged and optionally deployed.</p>
+<p>The benchmark pipeline provides automated testing and benchmarking of deployed models. It works in conjunction with the <a href="modelcar-pipeline.html" class="xref page">ModelCar Pipeline</a> to evaluate models that have been packaged and registered.</p>
 </div>
 <div class="paragraph">
-<p>The evaluation pipeline consists of multiple integrated evaluation tasks:</p>
+<p>The benchmark pipeline consists of multiple integrated evaluation tasks:</p>
 </div>
 <div class="ulist">
 <ul>
@@ -154,13 +154,33 @@
 </td>
 <td class="content">
 <div class="paragraph">
-<p><strong>Relationship to ModelCar Pipeline:</strong>
-* The ModelCar pipeline packages models into OCI images and can deploy them
-* The evaluation pipeline evaluates already-deployed models OR can deploy them first
-* Both pipelines can work independently, but typically you:
-  1. Package a model using ModelCar pipeline
-  2. Evaluate the deployed model using this evaluation pipeline
-  3. Results are stored in S3 and registered in the Model Registry</p>
+<p><strong>Relationship to ModelCar Pipeline:</strong></p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p>The ModelCar pipeline packages models into OCI images and registers them in the Model Registry</p>
+</li>
+<li>
+<p>The benchmark pipeline evaluates already-deployed models OR can deploy them first</p>
+</li>
+<li>
+<p>Typical workflow:</p>
+<div class="olist arabic">
+<ol class="arabic">
+<li>
+<p>Package a model using ModelCar pipeline</p>
+</li>
+<li>
+<p>Evaluate the deployed model using this benchmark pipeline</p>
+</li>
+<li>
+<p>Results are stored in S3 and registered in the Model Registry</p>
+</li>
+</ol>
+</div>
+</li>
+</ul>
 </div>
 </td>
 </tr>
@@ -172,7 +192,7 @@
 <h2 id="_prerequisites"><a class="anchor" href="#_prerequisites"></a>Prerequisites</h2>
 <div class="sectionbody">
 <div class="paragraph">
-<p>Before deploying the evaluation pipeline, ensure you have:</p>
+<p>Before deploying the benchmark pipeline, ensure you have:</p>
 </div>
 <div class="ulist">
 <ul>
@@ -205,7 +225,7 @@
 <h2 id="_pipeline_architecture"><a class="anchor" href="#_pipeline_architecture"></a>Pipeline Architecture</h2>
 <div class="sectionbody">
 <div class="paragraph">
-<p>The evaluation pipeline orchestrates the following workflow:</p>
+<p>The benchmark pipeline orchestrates the following workflow:</p>
 </div>
 <div class="listingblock">
 <div class="content">
@@ -306,13 +326,7 @@ oc create configmap custom-mmlu \
   --from-file=task.yaml=deploy/guidellm-pipeline/custom-lm-eval/task.yaml \
   --from-file=custom-task.yaml=deploy/guidellm-pipeline/custom-lm-eval/custom-task.yaml \
   --from-file=data.jsonl=deploy/guidellm-pipeline/custom-lm-eval/data.jsonl \
-  -n modelcar-pipelines
-
-# For custom evaluations, you may also need to create a ConfigMap with your custom data
-# oc create configmap custom-lmeval-benchmark-files \
-#   --from-file=task.yaml=deploy/guidellm-pipeline/custom-lm-eval/task.yaml \
-#   --from-file=data.jsonl=deploy/guidellm-pipeline/custom-lm-eval/data.jsonl \
-#   -n vllm</code></pre>
+  -n modelcar-pipelines</code></pre>
 </div>
 </div>
 <div class="admonitionblock note">
@@ -333,7 +347,7 @@ oc create configmap custom-mmlu \
 <div class="sect2">
 <h3 id="_deploy_main_pipeline"><a class="anchor" href="#_deploy_main_pipeline"></a>Deploy Main Pipeline</h3>
 <div class="paragraph">
-<p>Deploy the main evaluation pipeline:</p>
+<p>Deploy the main benchmark pipeline:</p>
 </div>
 <div class="listingblock">
 <div class="content">
@@ -380,7 +394,7 @@ oc get serviceaccount pipeline -n modelcar-pipelines</code></pre>
 </div>
 </div>
 <div class="sect1">
-<h2 id="_running_the_evaluation_pipeline"><a class="anchor" href="#_running_the_evaluation_pipeline"></a>Running the Evaluation Pipeline</h2>
+<h2 id="_running_the_benchmark_pipeline"><a class="anchor" href="#_running_the_benchmark_pipeline"></a>Running the Benchmark Pipeline</h2>
 <div class="sectionbody">
 <div class="sect2">
 <h3 id="_basic_evaluation_run"><a class="anchor" href="#_basic_evaluation_run"></a>Basic Evaluation Run</h3>
@@ -483,107 +497,6 @@ EOF</code></pre>
 </table>
 </div>
 </div>
-<div class="sect2">
-<h3 id="_custom_evaluation_run"><a class="anchor" href="#_custom_evaluation_run"></a>Custom Evaluation Run</h3>
-<div class="paragraph">
-<p>To run custom evaluation tasks with custom data:</p>
-</div>
-<div class="listingblock">
-<div class="content">
-<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash"># First, upload your custom data file to the S3 'custom-data' bucket
-# Then create the PipelineRun:
-
-oc create -f - &lt;&lt;EOF
-apiVersion: tekton.dev/v1
-kind: PipelineRun
-metadata:
-  generateName: custom-eval-run-
-  namespace: modelcar-pipelines
-spec:
-  pipelineRef:
-    name: guidellm-benchmark-pipeline
-  params:
-    - name: target
-      value: "http://my-model-predictor.vllm.svc.cluster.local:8080/v1"
-    - name: model-name
-      value: "my-custom-model"
-    - name: processor
-      value: "org/model-repo"
-    - name: data-config
-      value: "prompt_tokens=1024,output_tokens=256"
-    - name: max-seconds
-      value: "60"
-    - name: rate-type
-      value: "fixed"
-    - name: rate
-      value: "10.0"
-    - name: api-key
-      value: ""
-    - name: max-concurrency
-      value: "10"
-    - name: huggingface-token
-      value: ""
-    - name: s3-api-endpoint
-      value: "http://minio-service.s3-storage.svc.cluster.local:9000"
-    - name: s3-access-key-id
-      value: "minio"
-    - name: s3-secret-access-key
-      value: "minio123"
-    - name: model-url
-      value: "quay.io/&lt;YOUR_ORG&gt;/my-custom-model:latest"
-    - name: lm-eval-job-name
-      value: "custom-eval-job"
-    - name: lm-eval-custom
-      value: "True"
-    - name: custom-data
-      value: "True"
-    - name: custom-filename
-      value: "my-custom-prompts.csv"
-    - name: model-reg-author
-      value: "ModelOps Team"
-    - name: valuesContent
-      value: |
-        deploymentMode: RawDeployment
-        fullnameOverride: "my-custom-model"
-        model:
-          modelNameOverride: "my-custom-model"
-          uri: "oci://quay.io/&lt;YOUR_ORG&gt;/my-custom-model:latest"
-  workspaces:
-    - name: shared-workspace
-      persistentVolumeClaim:
-        claimName: guidellm-output-pvc
-    - name: manifests
-      configMap:
-        name: mmlu-manifest
-    - name: custom-mmlu
-      configMap:
-        name: custom-mmlu
-  taskRunTemplate:
-    serviceAccountName: pipeline
-  timeouts:
-    pipeline: 2h0m0s
-EOF</code></pre>
-</div>
-</div>
-<div class="admonitionblock note">
-<table>
-<tr>
-<td class="icon">
-<i class="fa icon-note" title="Note"></i>
-</td>
-<td class="content">
-<div class="paragraph">
-<p><strong>Custom Data Setup:</strong>
-* Upload your custom prompt file (CSV, JSONL, etc.) to the S3 bucket named <code>custom-data</code> in MinIO
-* Set <code>custom-data: "True"</code> and provide the filename in <code>custom-filename</code>
-* The file will be downloaded from S3 during the benchmark task
-* For custom LM-Eval tasks, ensure your <code>custom-mmlu</code> ConfigMap contains the task definition and data files</p>
-</div>
-</td>
-</tr>
-</table>
-</div>
-</div>
 </div>
 </div>
 <div class="sect1">
@@ -655,7 +568,7 @@ EOF</code></pre>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>s3-api-endpoint</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">S3 endpoint URL (update to match your MinIO deployment)</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">S3 endpoint URL</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code><a href="http://s3.openshift-storage.svc.cluster.local:80" class="bare">http://s3.openshift-storage.svc.cluster.local:80</a></code> (default) or <code><a href="http://minio-service.s3-storage.svc.cluster.local:9000" class="bare">http://minio-service.s3-storage.svc.cluster.local:9000</a></code> (MinIO)</p></td>
 </tr>
 <tr>
@@ -708,53 +621,13 @@ EOF</code></pre>
 </div>
 </div>
 <div class="sect1">
-<h2 id="_building_custom_evaluation_containers"><a class="anchor" href="#_building_custom_evaluation_containers"></a>Building Custom Evaluation Containers</h2>
-<div class="sectionbody">
-<div class="paragraph">
-<p>The evaluation pipeline uses custom containers that can be built and customized:</p>
-</div>
-<div class="sect2">
-<h3 id="_guidellm_evaluation_container"><a class="anchor" href="#_guidellm_evaluation_container"></a>GuideLLM Evaluation Container</h3>
-<div class="paragraph">
-<p>Location: <code>deploy/tasks/evaluate/</code></p>
-</div>
-<div class="listingblock">
-<div class="content">
-<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">cd deploy/tasks/evaluate
-chmod +x build-guidellm-container.sh
-
-# Build with defaults
-./build-guidellm-container.sh
-
-# Or build manually
-podman build --platform linux/amd64 \
-  -t quay.io/&lt;YOUR_ORG&gt;/guidellm-ubi:latest \
-  -f Containerfile .
-podman push quay.io/&lt;YOUR_ORG&gt;/guidellm-ubi:latest</code></pre>
-</div>
-</div>
-<div class="paragraph">
-<p>Update the task YAML to reference your custom image:</p>
-</div>
-<div class="listingblock">
-<div class="content">
-<pre class="highlightjs highlight"><code class="language-yaml hljs" data-lang="yaml"># In guidellm-benchmark-task.yaml
-steps:
-  - name: guidellm-evaluate
-    image: quay.io/&lt;YOUR_ORG&gt;/guidellm-ubi:latest</code></pre>
-</div>
-</div>
-</div>
-</div>
-</div>
-<div class="sect1">
-<h2 id="_monitoring_evaluation_runs"><a class="anchor" href="#_monitoring_evaluation_runs"></a>Monitoring Evaluation Runs</h2>
+<h2 id="_monitoring_benchmark_runs"><a class="anchor" href="#_monitoring_benchmark_runs"></a>Monitoring Benchmark Runs</h2>
 <div class="sectionbody">
 <div class="sect2">
 <h3 id="_view_pipeline_status"><a class="anchor" href="#_view_pipeline_status"></a>View Pipeline Status</h3>
 <div class="listingblock">
 <div class="content">
-<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash"># List evaluation pipeline runs
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash"># List benchmark pipeline runs
 oc get pipelinerun -l tekton.dev/pipeline=guidellm-benchmark-pipeline \
   -n modelcar-pipelines
 
@@ -787,201 +660,6 @@ oc logs -l job-name=&lt;LMEVAL_JOB_NAME&gt; -n vllm -f
 oc logs -l tekton.dev/pipelineRun=&lt;PIPELINERUN_NAME&gt; \
   -l tekton.dev/pipelineTask=register-model-and-results \
   -n modelcar-pipelines -f</code></pre>
-</div>
-</div>
-</div>
-<div class="sect2">
-<h3 id="_view_results_in_s3"><a class="anchor" href="#_view_results_in_s3"></a>View Results in S3</h3>
-<div class="paragraph">
-<p>Access evaluation results in MinIO:</p>
-</div>
-<div class="listingblock">
-<div class="content">
-<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash"># Get MinIO route
-oc get route minio-api -n s3-storage
-
-# Log in to MinIO console with credentials
-# Navigate to buckets:
-# - guidellm-results/ - GuideLLM benchmark results
-# - lm-eval-results/ - LM-Eval task results</code></pre>
-</div>
-</div>
-</div>
-</div>
-</div>
-<div class="sect1">
-<h2 id="_understanding_evaluation_results"><a class="anchor" href="#_understanding_evaluation_results"></a>Understanding Evaluation Results</h2>
-<div class="sectionbody">
-<div class="sect2">
-<h3 id="_guidellm_results"><a class="anchor" href="#_guidellm_results"></a>GuideLLM Results</h3>
-<div class="paragraph">
-<p>GuideLLM produces JSON files with performance metrics:</p>
-</div>
-<div class="listingblock">
-<div class="content">
-<pre class="highlightjs highlight"><code class="language-json hljs" data-lang="json">{
-  "model": "granite-3.3-2b-instruct",
-  "metrics": {
-    "throughput": {
-      "requests_per_second": 15.2,
-      "tokens_per_second": 1248.5
-    },
-    "latency": {
-      "mean_ms": 125.3,
-      "p50_ms": 110.2,
-      "p95_ms": 180.5,
-      "p99_ms": 250.1
-    },
-    "quality": {
-      "time_to_first_token_ms": 45.2,
-      "inter_token_latency_ms": 8.5
-    }
-  }
-}</code></pre>
-</div>
-</div>
-<div class="paragraph">
-<p>Key metrics:
-* <strong>Throughput</strong>: Requests and tokens per second
-* <strong>Latency</strong>: Response time percentiles
-* <strong>Quality</strong>: Time to first token, inter-token latency</p>
-</div>
-</div>
-<div class="sect2">
-<h3 id="_lm_eval_results"><a class="anchor" href="#_lm_eval_results"></a>LM-Eval Results</h3>
-<div class="paragraph">
-<p>LM-Eval produces accuracy scores for various tasks:</p>
-</div>
-<div class="listingblock">
-<div class="content">
-<pre class="highlightjs highlight"><code class="language-json hljs" data-lang="json">{
-  "results": {
-    "mmlu": {
-      "acc": 0.652,
-      "acc_stderr": 0.012
-    },
-    "humaneval": {
-      "pass@1": 0.347
-    },
-    "mbpp": {
-      "pass@1": 0.412
-    }
-  },
-  "config": {
-    "model": "granite-3.3-2b-instruct",
-    "tasks": ["mmlu", "humaneval", "mbpp"]
-  }
-}</code></pre>
-</div>
-</div>
-</div>
-</div>
-</div>
-<div class="sect1">
-<h2 id="_creating_custom_evaluation_tasks"><a class="anchor" href="#_creating_custom_evaluation_tasks"></a>Creating Custom Evaluation Tasks</h2>
-<div class="sectionbody">
-<div class="sect2">
-<h3 id="_custom_lm_eval_task"><a class="anchor" href="#_custom_lm_eval_task"></a>Custom LM-Eval Task</h3>
-<div class="paragraph">
-<p>Create a custom LMEvalJob definition. The pipeline uses TrustyAI&#8217;s LMEvalJob Custom Resource:</p>
-</div>
-<div class="listingblock">
-<div class="content">
-<pre class="highlightjs highlight"><code class="language-yaml hljs" data-lang="yaml">apiVersion: trustyai.opendatahub.io/v1alpha1
-kind: LMEvalJob
-metadata:
-  name: custom-eval-job
-  namespace: vllm
-spec:
-  model: local-completions  # or local-chat-completions for chat models
-  taskList:
-    taskNames:
-      - custom-lmeval-task  # Your custom task name
-  modelArgs:
-    - name: model
-      value: granite-2b  # Your InferenceService name
-    - name: base_url
-      value: http://granite-2b-predictor.vllm.svc.cluster.local:8080/v1/completions
-    - name: include_path
-      value: /opt/app-root/src/my_tasks  # Path where task.yaml is mounted
-    - name: num_concurrent
-      value: '1'
-    - name: max_retries
-      value: '6'
-    - name: tokenized_requests
-      value: 'False'
-    - name: tokenizer
-      value: ibm-granite/granite-3.3-8b-instruct
-  logSamples: true
-  batchSize: '1'
-  allowOnline: true
-  allowCodeExecution: false
-  outputs:
-    pvcManaged:
-      size: 5Gi
-  pod:
-    volumes:
-      - name: custom-benchmark-volume
-        configMap:
-          name: custom-lmeval-benchmark-files
-    container:
-      volumeMounts:
-        - name: custom-benchmark-volume
-          mountPath: /opt/app-root/src/my_tasks/task.yaml
-          subPath: task.yaml
-          readOnly: true
-        - name: custom-benchmark-volume
-          mountPath: /opt/app-root/src/my_tasks/data.jsonl
-          subPath: data.jsonl
-          readOnly: true</code></pre>
-</div>
-</div>
-<div class="paragraph">
-<p>Create the ConfigMap with your custom task files:</p>
-</div>
-<div class="listingblock">
-<div class="content">
-<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash"># Create ConfigMap with custom task definition and data
-oc create configmap custom-lmeval-benchmark-files \
-  --from-file=task.yaml=deploy/guidellm-pipeline/custom-lm-eval/task.yaml \
-  --from-file=data.jsonl=deploy/guidellm-pipeline/custom-lm-eval/data.jsonl \
-  -n vllm
-
-# Update the custom-mmlu ConfigMap in pipeline namespace
-oc create configmap custom-mmlu \
-  --from-file=custom-mmlu.yaml=my-custom-eval-job.yaml \
-  --from-file=task.yaml=deploy/guidellm-pipeline/custom-lm-eval/task.yaml \
-  --from-file=custom-task.yaml=deploy/guidellm-pipeline/custom-lm-eval/custom-task.yaml \
-  --from-file=data.jsonl=deploy/guidellm-pipeline/custom-lm-eval/data.jsonl \
-  -n modelcar-pipelines \
-  --dry-run=client -o yaml | oc apply -f -</code></pre>
-</div>
-</div>
-</div>
-<div class="sect2">
-<h3 id="_custom_dataset"><a class="anchor" href="#_custom_dataset"></a>Custom Dataset</h3>
-<div class="paragraph">
-<p>Create a ConfigMap with custom evaluation data:</p>
-</div>
-<div class="listingblock">
-<div class="content">
-<pre class="highlightjs highlight"><code class="language-yaml hljs" data-lang="yaml">apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: my-custom-dataset
-  namespace: modelcar-pipelines
-data:
-  custom-data.json: |
-    [
-      {
-        "input": "What is the capital of France?",
-        "expected_output": "Paris"
-      },
-      {
-        "input": "Explain quantum computing.",
-        "expected_output": "Quantum computing uses quantum mechanics..."
-      }
-    ]</code></pre>
 </div>
 </div>
 </div>
@@ -1077,65 +755,12 @@ oc logs &lt;POD_NAME&gt; -n vllm
 </div>
 </div>
 <div class="sect1">
-<h2 id="_best_practices"><a class="anchor" href="#_best_practices"></a>Best Practices</h2>
-<div class="sectionbody">
-<div class="sect2">
-<h3 id="_resource_allocation"><a class="anchor" href="#_resource_allocation"></a>Resource Allocation</h3>
-<div class="ulist">
-<ul>
-<li>
-<p>Allocate sufficient memory for evaluation tasks (8Gi+ for larger models)</p>
-</li>
-<li>
-<p>Set appropriate timeouts based on model size and evaluation complexity</p>
-</li>
-<li>
-<p>Use node selectors for GPU-enabled nodes if evaluating large models</p>
-</li>
-</ul>
-</div>
-</div>
-<div class="sect2">
-<h3 id="_result_management"><a class="anchor" href="#_result_management"></a>Result Management</h3>
-<div class="ulist">
-<ul>
-<li>
-<p>Regularly clean up old evaluation results from S3</p>
-</li>
-<li>
-<p>Use versioning in model registry to track evaluation history</p>
-</li>
-<li>
-<p>Archive important evaluation runs for compliance</p>
-</li>
-</ul>
-</div>
-</div>
-<div class="sect2">
-<h3 id="_performance_optimization"><a class="anchor" href="#_performance_optimization"></a>Performance Optimization</h3>
-<div class="ulist">
-<ul>
-<li>
-<p>Run multiple evaluation tasks in parallel when possible</p>
-</li>
-<li>
-<p>Use shorter evaluation runs during development</p>
-</li>
-<li>
-<p>Run comprehensive evaluations during production releases</p>
-</li>
-</ul>
-</div>
-</div>
-</div>
-</div>
-<div class="sect1">
 <h2 id="_next_steps"><a class="anchor" href="#_next_steps"></a>Next Steps</h2>
 <div class="sectionbody">
 <div class="ulist">
 <ul>
 <li>
-<p>Integrate evaluation pipeline with CI/CD workflows</p>
+<p>Integrate benchmark pipeline with CI/CD workflows</p>
 </li>
 <li>
 <p>Create custom evaluation tasks for domain-specific testing</p>
@@ -1146,13 +771,16 @@ oc logs &lt;POD_NAME&gt; -n vllm
 <li>
 <p>Build dashboards for evaluation result visualization</p>
 </li>
+<li>
+<p>View registered models and results in the RHOAI Model Registry</p>
+</li>
 </ul>
 </div>
 </div>
 </div>
 <nav class="pagination">
-  <span class="prev"><a href="benchmark-pipeline.html">Benchmark Pipeline Deployment</a></span>
-  <span class="next"><a href="results-analysis.html">Results Analysis and Visualization</a></span>
+  <span class="prev"><a href="modelcar-pipeline.html">ModelCar Pipeline Deployment</a></span>
+  <span class="next"><a href="evaluation-pipeline.html">Evaluation Pipeline Deployment</a></span>
 </nav>
 </article>
   </div>

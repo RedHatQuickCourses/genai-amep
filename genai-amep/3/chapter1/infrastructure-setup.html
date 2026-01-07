@@ -57,6 +57,9 @@
     <a class="nav-link" href="modelcar-pipeline.html">ModelCar Pipeline Deployment</a>
   </li>
   <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="benchmark-pipeline.html">Benchmark Pipeline Deployment</a>
+  </li>
+  <li class="nav-item" data-depth="2">
     <a class="nav-link" href="evaluation-pipeline.html">Evaluation Pipeline Deployment</a>
   </li>
   <li class="nav-item" data-depth="2">
@@ -120,7 +123,7 @@
 <td class="content">
 <div class="title">Existing Infrastructure?</div>
 <div class="paragraph">
-<p>If you already have access to an S3 bucket, an Image Registry (Quay), and the OpenShift AI Model Registry, you can <strong>skip this page</strong> and proceed to <a href="#modelcar-pipeline.adoc:index.adoc" class="xref unresolved">Model pipeline deployment</a>.</p>
+<p>If you already have access to an S3 bucket, an Image Registry (Quay), and the OpenShift AI Model Registry, you can <strong>skip this page</strong> and proceed to <a href="#modelcar-pipeline.adoc:index.adoc" class="xref unresolved">ModelCar pipeline deployment</a>.</p>
 </div>
 </td>
 </tr>
@@ -284,7 +287,11 @@ oc get route -n s3-storage | grep s3-ui</code></pre>
 <td class="content">
 <div class="title">Security Notice</div>
 <div class="paragraph">
-<p>The default <code>minio-backend.yaml</code> uses generic passwords (<code>minio123</code>). For a production deployment, please rotate these credentials immediately.</p>
+<p>The default <code>minio-backend.yaml</code> uses generic passwords (<code>minio123</code>). For a production deployment, please rotate these credentials immediately.<br></p>
+</div>
+<div class="paragraph">
+<p>+
+The default persistent volume claim for minio is 100Gi, this may not be enough for larger models.</p>
 </div>
 </td>
 </tr>
