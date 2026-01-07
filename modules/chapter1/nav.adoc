@@ -3,6 +3,7 @@
 //** xref:multilang-evaluation.adoc[Model compression]
 **  xref:infrastructure-setup.adoc[Infrastructure setup]
 ** xref:modelcar-pipeline.adoc[ModelCar Pipeline Deployment]
+** xref:benchmark-pipeline.adoc[Benchmark Pipeline Deployment]
 ** xref:evaluation-pipeline.adoc[Evaluation Pipeline Deployment]
 ** xref:results-analysis.adoc[Results Analysis and Visualization]
 //** xref:section2.adoc

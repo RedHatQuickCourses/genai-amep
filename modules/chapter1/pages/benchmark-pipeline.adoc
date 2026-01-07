@@ -1,0 +1,475 @@
+= Benchmark Pipeline Deployment
+
+This guide covers the deployment and usage of the GuideLLM benchmark evaluation pipeline for comprehensive model assessment on OpenShift AI.
+
+== Overview
+
+The benchmark pipeline provides automated testing and benchmarking of deployed models. It works in conjunction with the xref:modelcar-pipeline.adoc[ModelCar Pipeline] to evaluate models that have been packaged and registered.
+
+The benchmark pipeline consists of multiple integrated evaluation tasks:
+
+* *Model Deployment* (optional): Deploys models using Helm if not already deployed
+* *GuideLLM Benchmarking*: Performance, throughput, and latency testing
+* *LM-Eval Tasks*: Accuracy evaluation using TrustyAI LMEvalJob (MMLU, HumanEval, MBPP, etc.)
+* *Custom Evaluation Tasks*: Support for custom evaluation datasets
+* *S3 Storage*: Automated upload of results to object storage
+* *Model Registry Integration*: Automatic registration of evaluation results
+
+[NOTE]
+====
+**Relationship to ModelCar Pipeline:**
+
+ * The ModelCar pipeline packages models into OCI images and registers them in the Model Registry
+ * The benchmark pipeline evaluates already-deployed models OR can deploy them first
+ * Typical workflow:
+  1. Package a model using ModelCar pipeline
+  2. Evaluate the deployed model using this benchmark pipeline
+  3. Results are stored in S3 and registered in the Model Registry
+====
+
+== Prerequisites
+
+Before deploying the benchmark pipeline, ensure you have:
+
+* xref:infrastructure-setup.adoc[Infrastructure Setup] completed (MinIO, Model Registry)
+* xref:modelcar-pipeline.adoc[ModelCar Pipeline] deployed and a model packaged
+* OpenShift AI 3.0+ with TrustyAI operator installed (for LMEvalJob support)
+* A deployed model (InferenceService) to evaluate, or the pipeline will deploy one
+* Pipeline namespace configured (e.g., `modelcar-pipelines`)
+* A separate namespace for model deployments (e.g., `vllm`) - this is where LMEvalJobs run
+* ServiceAccount named `pipeline` in the pipeline namespace with appropriate permissions
+
+== Pipeline Architecture
+
+The benchmark pipeline orchestrates the following workflow:
+
+[source,mermaid]
+----
+graph LR
+    A[Deploy Model] --> B[GuideLLM Benchmark]
+    B --> C[Upload GuideLLM Results]
+    C --> D[LM-Eval Tasks]
+    D --> E[Upload LM-Eval Results]
+    E --> F[Register Results in Model Registry]
+----
+
+. *Deploy Model*: Optionally deploys the model as a vLLM InferenceService using Helm (if not already deployed)
+. *GuideLLM Benchmark*: Runs performance benchmarking against the model endpoint
+. *Upload GuideLLM Results*: Stores benchmark results in S3 (bucket: `guidellm-results`)
+. *LM-Eval Tasks*: Creates and runs TrustyAI LMEvalJob for accuracy evaluation
+. *Upload LM-Eval Results*: Stores evaluation results in S3 (bucket: `lm-eval-results`)
+. *Register Results*: Updates model registry with evaluation metadata and links to results
+
+== Deploy Pipeline Components
+
+=== Create Pipeline Storage
+
+Create a PVC for storing evaluation results:
+
+[source,bash]
+----
+oc apply -f deploy/guidellm-pipeline/pipeline/pvc.yaml -n modelcar-pipelines
+----
+
+This creates `guidellm-output-pvc` for workspace storage.
+
+=== Deploy Evaluation Tasks
+
+Deploy the individual Tekton tasks:
+
+[source,bash]
+----
+# Deploy model task
+oc apply -f deploy/guidellm-pipeline/pipeline/deploy-model-task.yaml -n modelcar-pipelines
+
+# GuideLLM benchmark task
+oc apply -f deploy/guidellm-pipeline/pipeline/guidellm-benchmark-task.yaml -n modelcar-pipelines
+
+# Upload GuideLLM results task
+oc apply -f deploy/guidellm-pipeline/pipeline/upload-guidellm-results-task.yaml -n modelcar-pipelines
+
+# LM-Eval task
+oc apply -f deploy/guidellm-pipeline/pipeline/lm-eval-task.yaml -n modelcar-pipelines
+
+# Upload LM-Eval results task
+oc apply -f deploy/guidellm-pipeline/pipeline/upload-lm-eval-results-task.yaml -n modelcar-pipelines
+
+# Model registry integration task
+oc apply -f deploy/guidellm-pipeline/pipeline/model-registry-task.yaml -n modelcar-pipelines
+----
+
+=== Create Evaluation ConfigMaps
+
+The pipeline requires ConfigMaps for LM-Eval job definitions. Note that `mmlu.yaml` is actually a LMEvalJob Custom Resource, not a ConfigMap:
+
+[source,bash]
+----
+# Create namespace for model deployments (if it doesn't exist)
+oc create namespace vllm --dry-run=client -o yaml | oc apply -f -
+
+# Create ConfigMap for standard MMLU evaluation job manifest
+oc create configmap mmlu-manifest \
+  --from-file=mmlu.yaml=deploy/guidellm-pipeline/pipeline/mmlu.yaml \
+  -n modelcar-pipelines
+
+# Create ConfigMap for custom evaluation (if using custom datasets)
+oc create configmap custom-mmlu \
+  --from-file=custom-mmlu.yaml=deploy/guidellm-pipeline/custom-lm-eval/custom-mmlu.yaml \
+  --from-file=task.yaml=deploy/guidellm-pipeline/custom-lm-eval/task.yaml \
+  --from-file=custom-task.yaml=deploy/guidellm-pipeline/custom-lm-eval/custom-task.yaml \
+  --from-file=data.jsonl=deploy/guidellm-pipeline/custom-lm-eval/data.jsonl \
+  -n modelcar-pipelines
+----
+
+[NOTE]
+====
+The LMEvalJob Custom Resources are applied to the `vllm` namespace (or your model deployment namespace), not the pipeline namespace. The ConfigMaps are used by the pipeline to store the job definitions.
+====
+
+=== Deploy Main Pipeline
+
+Deploy the main benchmark pipeline:
+
+[source,bash]
+----
+oc apply -f deploy/guidellm-pipeline/pipeline/benchmark-eval-pipeline.yaml -n modelcar-pipelines
+----
+
+=== Create ServiceAccount
+
+The pipeline requires a ServiceAccount with permissions to create and manage resources:
+
+[source,bash]
+----
+# Create ServiceAccount (if not already exists)
+oc create serviceaccount pipeline -n modelcar-pipelines --dry-run=client -o yaml | oc apply -f -
+
+# Grant necessary permissions (adjust as needed for your environment)
+# The ServiceAccount needs permissions to:
+# - Create/delete LMEvalJobs in the vllm namespace
+# - Access ConfigMaps and PVCs
+# - Deploy models using Helm (if using deploy-model task)
+----
+
+=== Verify Pipeline Deployment
+
+[source,bash]
+----
+# Check tasks
+oc get tasks -n modelcar-pipelines | grep -E "(guidellm-benchmark|lm-eval|deploy-model|upload-guidellm|upload-lm-eval|model-registry)"
+
+# Check pipeline
+oc get pipeline guidellm-benchmark-pipeline -n modelcar-pipelines
+
+# Check ConfigMaps
+oc get configmap -n modelcar-pipelines | grep -E "(mmlu-manifest|custom-mmlu)"
+
+# Check ServiceAccount
+oc get serviceaccount pipeline -n modelcar-pipelines
+----
+
+== Running the Benchmark Pipeline
+
+=== Basic Evaluation Run
+
+To evaluate a deployed model:
+
+[source,bash]
+----
+oc create -f - <<EOF
+apiVersion: tekton.dev/v1
+kind: PipelineRun
+metadata:
+  generateName: guidellm-benchmark-run-
+  namespace: modelcar-pipelines
+spec:
+  pipelineRef:
+    name: guidellm-benchmark-pipeline
+  params:
+    - name: target
+      value: "http://granite-2b-predictor.vllm.svc.cluster.local:8080/v1"
+    - name: model-name
+      value: "granite-2b"
+    - name: processor
+      value: "ibm-granite/granite-3.3-2b-instruct"
+    - name: data-config
+      value: "prompt_tokens=800,output_tokens=128"
+    - name: max-seconds
+      value: "30"
+    - name: rate-type
+      value: "sweep"
+    - name: rate
+      value: "1.0, 4.0, 8.0, 16.0"
+    - name: api-key
+      value: ""
+    - name: max-concurrency
+      value: "10"
+    - name: huggingface-token
+      value: ""
+    - name: s3-api-endpoint
+      value: "http://minio-service.s3-storage.svc.cluster.local:9000"
+    - name: s3-access-key-id
+      value: "minio"
+    - name: s3-secret-access-key
+      value: "minio123"
+    - name: model-url
+      value: "quay.io/<YOUR_ORG>/granite-3.3-2b-instruct:latest"
+    - name: lm-eval-job-name
+      value: "mmlu-jurisprudence-eval-job"
+    - name: lm-eval-custom
+      value: "False"
+    - name: custom-data
+      value: "False"
+    - name: custom-filename
+      value: "no-file"
+    - name: model-reg-author
+      value: "ModelOps Team"
+    - name: valuesContent
+      value: |
+        deploymentMode: RawDeployment
+        fullnameOverride: "granite-2b"
+        model:
+          modelNameOverride: "granite-2b"
+          uri: "oci://quay.io/<YOUR_ORG>/granite-3.3-2b-instruct:latest"
+          args:
+            - "--disable-log-requests"
+            - "--max-num-seqs=32"
+  workspaces:
+    - name: shared-workspace
+      persistentVolumeClaim:
+        claimName: guidellm-output-pvc
+    - name: manifests
+      configMap:
+        name: mmlu-manifest
+    - name: custom-mmlu
+      configMap:
+        name: custom-mmlu
+  taskRunTemplate:
+    serviceAccountName: pipeline
+  timeouts:
+    pipeline: 1h0m0s
+EOF
+----
+
+[NOTE]
+====
+**Important Notes:**
+* The `target` parameter should point to your deployed model's endpoint. If the model is not yet deployed, the `deploy-model` task will deploy it using the Helm chart specified in `valuesContent`.
+* The `lm-eval-job-name` must match the name in the LMEvalJob CR (e.g., `mmlu-jurisprudence-eval-job` from `mmlu.yaml`).
+* The LMEvalJob will be created in the `vllm` namespace (or the namespace specified in the job definition).
+* Ensure the model endpoint URL format matches: `http://<SERVICE_NAME>-predictor.<NAMESPACE>.svc.cluster.local:8080/v1`
+====
+
+== Pipeline Parameters Reference
+
+[cols="1,2,1"]
+|===
+|Parameter |Description |Default
+
+|`target`
+|Model endpoint URL (e.g., `http://service.namespace.svc.cluster.local:8080/v1`)
+|Required
+
+|`model-name`
+|Model identifier for results
+|Required
+
+|`processor`
+|Hugging Face model path for tokenizer
+|Required
+
+|`data-config`
+|Token configuration (`prompt_tokens=N,output_tokens=M`)
+|`prompt_tokens=800,output_tokens=128`
+
+|`max-seconds`
+|Maximum benchmark duration in seconds
+|`30`
+
+|`rate-type`
+|Benchmark rate type (`sweep`, `fixed`)
+|`sweep`
+
+|`rate`
+|Request rate(s) for benchmarking
+|`1.0, 4.0, 8.0, 16.0`
+
+|`api-key`
+|OpenAI API key if required
+|``
+
+|`max-concurrency`
+|Maximum concurrent requests
+|`10`
+
+|`huggingface-token`
+|Hugging Face token for gated models
+|``
+
+|`s3-api-endpoint`
+|S3 endpoint URL
+|`http://s3.openshift-storage.svc.cluster.local:80` (default) or `http://minio-service.s3-storage.svc.cluster.local:9000` (MinIO)
+
+|`s3-access-key-id`
+|S3 access key ID
+|Required
+
+|`s3-secret-access-key`
+|S3 secret access key
+|Required
+
+|`model-url`
+|ModelCar OCI image URL
+|Required
+
+|`lm-eval-job-name`
+|LM-Eval job name to run
+|Required
+
+|`lm-eval-custom`
+|Whether to use custom evaluation (`True`/`False`)
+|`False`
+
+|`custom-data`
+|Whether custom data is provided (`True`/`False`)
+|`False`
+
+|`custom-filename`
+|Custom evaluation data filename
+|`no-file`
+
+|`model-reg-author`
+|Model registry author name
+|Required
+
+|`valuesContent`
+|Helm values for model deployment
+|Required
+|===
+
+== Monitoring Benchmark Runs
+
+=== View Pipeline Status
+
+[source,bash]
+----
+# List benchmark pipeline runs
+oc get pipelinerun -l tekton.dev/pipeline=guidellm-benchmark-pipeline \
+  -n modelcar-pipelines
+
+# Watch specific run
+oc get pipelinerun <PIPELINERUN_NAME> -n modelcar-pipelines -w
+
+# Describe for details
+oc describe pipelinerun <PIPELINERUN_NAME> -n modelcar-pipelines
+----
+
+=== View Task Logs
+
+[source,bash]
+----
+# GuideLLM benchmark logs
+oc logs -l tekton.dev/pipelineRun=<PIPELINERUN_NAME> \
+  -l tekton.dev/pipelineTask=benchmark \
+  -n modelcar-pipelines -f
+
+# LM-Eval task logs (this task creates LMEvalJob in vllm namespace)
+oc logs -l tekton.dev/pipelineRun=<PIPELINERUN_NAME> \
+  -l tekton.dev/pipelineTask=lm-eval \
+  -n modelcar-pipelines -f
+
+# Check LMEvalJob pod logs in vllm namespace
+oc logs -l job-name=<LMEVAL_JOB_NAME> -n vllm -f
+
+# Model registry task logs
+oc logs -l tekton.dev/pipelineRun=<PIPELINERUN_NAME> \
+  -l tekton.dev/pipelineTask=register-model-and-results \
+  -n modelcar-pipelines -f
+----
+
+== Troubleshooting
+
+=== Model Endpoint Not Accessible
+
+Verify the InferenceService is running:
+
+[source,bash]
+----
+# Check InferenceService
+oc get inferenceservice -n <MODEL_NAMESPACE>
+
+# Check predictor pod
+oc get pods -l serving.kserve.io/inferenceservice=<MODEL_NAME> \
+  -n <MODEL_NAMESPACE>
+
+# Test endpoint
+oc run curl-test --rm -it --image=curlimages/curl -- \
+  curl http://<MODEL_SERVICE>.<NAMESPACE>.svc.cluster.local:8080/v1/models
+----
+
+=== GuideLLM Benchmark Fails
+
+Check GuideLLM task logs for errors:
+
+[source,bash]
+----
+# View detailed logs
+oc logs -l tekton.dev/pipelineTask=benchmark \
+  -l tekton.dev/pipelineRun=<PIPELINERUN_NAME> \
+  -n modelcar-pipelines
+
+# Common issues:
+# - Model endpoint unreachable
+# - Invalid data-config format
+# - Timeout too short for large models
+----
+
+=== S3 Upload Fails
+
+Verify MinIO credentials and connectivity:
+
+[source,bash]
+----
+# Check MinIO service
+oc get svc minio-service -n s3-storage
+
+# Test S3 access
+oc run aws-cli --rm -it --image=amazon/aws-cli -- \
+  s3 ls --endpoint-url http://minio-service.s3-storage.svc.cluster.local:9000 \
+  --no-verify-ssl
+----
+
+=== LM-Eval Job Fails
+
+Check the LMEvalJob status and logs:
+
+[source,bash]
+----
+# List LMEvalJobs (in vllm namespace, not pipeline namespace)
+oc get lmevaljob -n vllm
+
+# Check LMEvalJob status
+oc describe lmevaljob <JOB_NAME> -n vllm
+
+# Check the pod created by LMEvalJob
+oc get pods -n vllm | grep <JOB_NAME>
+
+# Check pod logs
+oc logs <POD_NAME> -n vllm
+
+# Common issues:
+# - Missing Hugging Face token for gated models (set in LMEvalJob spec)
+# - Insufficient memory for large models
+# - Invalid task configuration in ConfigMap
+# - Model endpoint not accessible from vllm namespace
+# - Missing custom task files in ConfigMap
+----
+
+== Next Steps
+
+* Integrate benchmark pipeline with CI/CD workflows
+* Create custom evaluation tasks for domain-specific testing
+* Set up automated alerts based on evaluation metrics
+* Build dashboards for evaluation result visualization
+* View registered models and results in the RHOAI Model Registry
+

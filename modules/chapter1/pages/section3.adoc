@@ -1,4 +1,49 @@
-= Section 3
 
-This is _Section 3_ of _Chapter 1_ in the *hello* quick course....
 
+
+
+# The secret name usually follows the pattern <model-name>-sa-token
+SECRET_NAME=$(oc get serviceaccount qwen -o jsonpath='{.secrets[0].name}')
+export TOKEN=$(oc get secret $SECRET_NAME -o jsonpath='{.data.token}' | base64 -d)
+
+
+export INFERENCE_URL=$http://a0ed0be8f4d804438bf7411d85f32fcc-2012662907.us-east-2.elb.amazonaws.com/my-ai-lab/qwen
+echo "Targeting: https://$INFERENCE_URL"
+
+time curl -k -X POST "http://a0ed0be8f4d804438bf7411d85f32fcc-2012662907.us-east-2.elb.amazonaws.com/my-ai-lab/qwen/v1/chat/completions" \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "Qwen/Qwen3-0.6B",
+    "messages": [
+      {"role": "system", "content": "You are a helpful assistant talking about OpenShift AI."},
+      {"role": "user", "content": "Explain Kubernetes in 50 words."}
+    ]
+  }'
+
+INFERENCE_URL=$(
+  oc -n openshift-ingress get gateway openshift-ai-inference \
+    -o jsonpath='{.status.addresses[0].value}'
+)
+
+LLM=qwen-kserve
+LLM_SVC=${LLM##*/}
+
+PROMPT="Explain the difference between supervised and unsupervised learning in machine learning. Include examples of algorithms used in each type."
+
+llm_post_data(){
+cat <<JSON
+{
+  "model": "${LLM}",
+  "prompt": "${PROMPT}",
+  "max_tokens": 200,
+  "temperature": 0.7,
+  "top_p": 0.9
+}
+JSON
+}
+
+curl -s -X POST http://a0ed0be8f4d804438bf7411d85f32fcc-2012662907.us-east-2.elb.amazonaws.com/my-ai-lab/qwen/v1/chat/completions \
+  -H "Content-Type: application/json" \
+  -d "$(llm_post_data)" | jq .choices[0].text
+  

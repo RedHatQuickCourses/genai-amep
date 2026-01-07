@@ -7,9 +7,6 @@ spec:
     - name: HUGGINGFACE_MODEL
       type: string
       description: "The Hugging Face model repository (e.g., ibm-granite/granite-3.2-2b-instruct)"
-    - name: OCI_IMAGE
-      type: string
-      description: "The OCI image destination (e.g., quay.io/my-user/my-modelcar)"
     - name: HUGGINGFACE_ALLOW_PATTERNS
       type: string
       description: 'Optional array of file patterns to allow default: "*.safetensors", "*.json", "*.txt"'
@@ -27,58 +24,22 @@ spec:
       default: "1.0.0"
     - name: SKIP_TASKS
       type: string
-      description: "Comma-separated list of tasks to skip (e.g., 'cleanup-workspace,pull-model-from-huggingface,compress-model,build-and-push-modelcar')"
+      description: "Comma-separated list of tasks to skip (e.g., 'cleanup-workspace,pull-model-from-huggingface,compress-model,upload-model-to-s3')"
       default: ""
     - name: MODEL_REGISTRY_URL
       type: string
       description: "URL of the model registry service"
-    - name: DEPLOY_MODEL
+    - name: S3_BUCKET
       type: string
-      description: "Whether to deploy the model as an InferenceService (true/false)"
-      default: "false"
-    - name: EVALUATE_MODEL
+      description: "S3 bucket name for model storage"
+      default: "models"
+    - name: S3_ENDPOINT_URL
       type: string
-      description: "Whether to evaluate the model (true/false)"
-      default: "false"
-    - name: TASKS
-      type: string
-      description: "Comma-separated list of evaluation tasks to run (e.g., 'arc_easy,hellaswag,winogrande')"
-      default: "humaneval,mbpp"
-    - name: GUIDELLM_EVALUATE_MODEL
-      type: string
-      description: "Whether to run GuideLLM performance evaluation (true/false)"
-      default: "false"
-    - name: MAX_MODEL_LEN
-      type: string
-      description: "Maximum model length for vLLM (default: 8192)"
-      default: "8192"
-    - name: VLLM_ARGS
-      type: string
-      description: "Additional vLLM arguments (e.g., '--chat-template /path/to/template.jinja --enable-auto-tool-choice')"
+      description: "S3 endpoint URL (for MinIO or S3-compatible storage)"
       default: ""
-    - name: MULTILANG_EVALUATE_MODEL
-      type: string
-      description: "Whether to run multi-language evaluation (true/false)"
-      default: "false"
-    - name: LANGUAGES
-      type: string
-      description: "Comma-separated list of languages to evaluate (en,es,ja)"
-      default: "en,es,ja"
-    - name: S3_ENABLED
-      type: string
-      description: "Whether to upload evaluation results to S3 (true/false)"
-      default: "false"
-    - name: TRUSTYAI_EVALUATE_MODEL
-      type: string
-      description: "Whether to run TrustyAI bias/fairness evaluation (true/false)"
-      default: "false"
-    - name: TRUSTYAI_SERVICE_URL
-      type: string
-      description: "TrustyAI service endpoint URL"
-      default: "http://trustyai-service:8080"
   workspaces:
     - name: shared-workspace
-    - name: quay-auth-workspace
+    - name: s3-credentials
   tasks:
     - name: cleanup-workspace
       taskSpec:
@@ -215,147 +176,73 @@ spec:
           workspace: shared-workspace
       runAfter:
         - pull-model-from-huggingface
-    - name: evaluate-model
-      taskRef:
-        name: evaluate-model
-      timeout: 2h
-      when:
-        - input: $(params.EVALUATE_MODEL)
-          operator: in
-          values: ["true"]
-        - input: $(params.SKIP_TASKS)
-          operator: notin
-          values: ["evaluate-model"]
-      params:
-        - name: EVALUATE_MODEL
-          value: $(params.EVALUATE_MODEL)
-        - name: SKIP_TASK
-          value: "evaluate-model"
-        - name: SKIP_TASKS
-          value: $(params.SKIP_TASKS)
-        - name: MODEL_NAME
-          value: $(params.MODEL_NAME)
-        - name: MODEL_VERSION
-          value: $(params.MODEL_VERSION)
-        - name: TASKS
-          value: $(params.TASKS)
-      workspaces:
-        - name: shared-workspace
-          workspace: shared-workspace
-      runAfter:
-        - compress-model
-    - name: guidellm-evaluate-model
-      taskRef:
-        name: guidellm-evaluate-model-containerized
-      timeout: 2h
-      when:
-        - input: $(params.GUIDELLM_EVALUATE_MODEL)
-          operator: in
-          values: ["true"]
-        - input: $(params.SKIP_TASKS)
-          operator: notin
-          values: ["guidellm-evaluate-model"]
-      params:
-        - name: GUIDELLM_EVALUATE_MODEL
-          value: $(params.GUIDELLM_EVALUATE_MODEL)
-        - name: SKIP_TASK
-          value: "guidellm-evaluate-model"
-        - name: SKIP_TASKS
-          value: $(params.SKIP_TASKS)
-        - name: MODEL_NAME
-          value: $(params.MODEL_NAME)
-        - name: MODEL_VERSION
-          value: $(params.MODEL_VERSION)
-      workspaces:
-        - name: shared-workspace
-          workspace: shared-workspace
-      runAfter:
-        - wait-for-service
-    - name: build-and-push-modelcar
+    - name: upload-model-to-s3
       taskSpec:
         workspaces:
           - name: shared-workspace
-          - name: quay-auth-workspace
+          - name: s3-credentials
         params:
-          - name: OCI_REGISTRY_SOURCE
-          - name: OCI_REGISTRY_DESTINATION
+          - name: MODEL_NAME
           - name: MODEL_VERSION
+          - name: S3_BUCKET
+          - name: S3_ENDPOINT_URL
           - name: SKIP_TASK
           - name: SKIP_TASKS
         steps:
-          - name: build-modelcar
-            image: quay.io/hayesphilip/modelcar-builder:latest
+          - name: upload-to-s3
+            image: quay.io/hayesphilip/s3-uploader:latest
             securityContext:
               runAsUser: 1001
+            env:
+              - name: MODEL_NAME
+                value: $(params.MODEL_NAME)
+              - name: MODEL_VERSION
+                value: $(params.MODEL_VERSION)
+              - name: S3_BUCKET
+                value: $(params.S3_BUCKET)
+              - name: S3_ENDPOINT_URL
+                value: $(params.S3_ENDPOINT_URL)
+              - name: AWS_ACCESS_KEY_ID
+                valueFrom:
+                  secretKeyRef:
+                    name: s3-credentials
+                    key: AWS_ACCESS_KEY_ID
+              - name: AWS_SECRET_ACCESS_KEY
+                valueFrom:
+                  secretKeyRef:
+                    name: s3-credentials
+                    key: AWS_SECRET_ACCESS_KEY
+              - name: WORKSPACE_PATH
+                value: /workspace/shared-workspace/model
+              - name: SKIP_TASK
+                value: $(params.SKIP_TASK)
+              - name: SKIP_TASKS
+                value: $(params.SKIP_TASKS)
             script: |
               #!/bin/bash
               set -e
-              echo "Developed by the Red Hat AI Customer Adoption and Innovation team (CAI)"
-              if [[ ",$(params.SKIP_TASKS)," == *",$(params.SKIP_TASK),"* ]]; then
-                echo "Skipping build-and-push-modelcar task"
-                exit 0
-              fi
-              echo "Setting up temporary workspace..."
-              TEMP_DIR="/tmp/olot-workspace"
-              mkdir -p $TEMP_DIR
-              cd $TEMP_DIR
-              echo "Cloning and Installing OLOT..."
-              git clone https://github.com/containers/olot.git
-              cd olot
-              # Verify Poetry is available
-              poetry --version
-              make
-              make install
-              export PATH=$PATH:/usr/local/bin
-              echo "OLOT installed successfully!"
-              IMAGE_DIR=download
-              MODEL_DIR=/workspace/shared-workspace/model
-              echo "Downloading OCI image from $(params.OCI_REGISTRY_SOURCE)..."
-              rm -rf $IMAGE_DIR
-              skopeo copy --multi-arch all --remove-signatures \
-                docker://$(params.OCI_REGISTRY_SOURCE) \
-                oci:${IMAGE_DIR}:latest
-              echo "Finding and appending model files to OCI image..."
-              
-              # Build list of files for olot command
-              FILES=()
-              for file in $(find $MODEL_DIR -type f); do
-                if [[ "$file" == *"README.md" ]]; then
-                  FILES+=("--modelcard" "$file")
-                else
-                  FILES+=("$file")
-                fi
-              done
-              
-              # Call olot once with all files
-              echo "Adding files to OCI image..."
-              poetry run olot $IMAGE_DIR "${FILES[@]}"
-              
-              echo "Pushing updated OCI image to $(params.OCI_REGISTRY_DESTINATION):$(params.MODEL_VERSION)..."
-              # Convert image name to lowercase
-              LOWER_IMAGE=$(echo "$(params.OCI_REGISTRY_DESTINATION)" | tr '[:upper:]' '[:lower:]')
-              skopeo copy --multi-arch all \
-                --authfile /workspace/quay-auth-workspace/.dockerconfigjson \
-                oci:${IMAGE_DIR}:latest \
-                docker://${LOWER_IMAGE}:$(params.MODEL_VERSION)
+              echo "Uploading model to S3..."
+              python /usr/local/bin/upload_model.py
       params:
-        - name: OCI_REGISTRY_SOURCE
-          value: "registry.access.redhat.com/ubi9-micro@sha256:414cfa255ea10eaef4528a26d5618eb67cf487b635ee20f8f14b9317bfd6a4be"
-        - name: OCI_REGISTRY_DESTINATION
-          value: $(params.OCI_IMAGE)
+        - name: MODEL_NAME
+          value: $(params.MODEL_NAME)
         - name: MODEL_VERSION
           value: $(params.MODEL_VERSION)
+        - name: S3_BUCKET
+          value: $(params.S3_BUCKET)
+        - name: S3_ENDPOINT_URL
+          value: $(params.S3_ENDPOINT_URL)
         - name: SKIP_TASK
-          value: "build-and-push-modelcar"
+          value: "upload-model-to-s3"
         - name: SKIP_TASKS
           value: $(params.SKIP_TASKS)
       workspaces:
         - name: shared-workspace
           workspace: shared-workspace
-        - name: quay-auth-workspace
-          workspace: quay-auth-workspace
+        - name: s3-credentials
+          workspace: s3-credentials
       runAfter:
-        - evaluate-model
+        - compress-model
     - name: register-with-registry
       taskSpec:
         workspaces:
@@ -363,7 +250,8 @@ spec:
         params:
           - name: MODEL_NAME
           - name: MODEL_VERSION
-          - name: OCI_IMAGE
+          - name: HUGGINGFACE_MODEL
+          - name: S3_BUCKET
           - name: SKIP_TASK
           - name: SKIP_TASKS
           - name: MODEL_REGISTRY_URL
@@ -373,19 +261,21 @@ spec:
             script: |
               #!/bin/bash
               set -e
-              echo "Running registration script..."
-              python /workspace/register.py
+              echo "Running S3 model registration script..."
+              python /workspace/register_s3_model.py
             volumeMounts:
-              - name: register-script
-                mountPath: /workspace/register.py
-                subPath: register.py
+              - name: register-s3-script
+                mountPath: /workspace/register_s3_model.py
+                subPath: register_s3_model.py
             env:
               - name: MODEL_NAME
                 value: $(params.MODEL_NAME)
               - name: MODEL_VERSION
                 value: $(params.MODEL_VERSION)
-              - name: OCI_IMAGE
-                value: $(params.OCI_IMAGE)
+              - name: HUGGINGFACE_MODEL
+                value: $(params.HUGGINGFACE_MODEL)
+              - name: S3_BUCKET
+                value: $(params.S3_BUCKET)
               - name: SKIP_TASK
                 value: $(params.SKIP_TASK)
               - name: SKIP_TASKS
@@ -395,16 +285,18 @@ spec:
               - name: CLUSTER_DOMAIN
                 value: "cluster.local"
         volumes:
-          - name: register-script
+          - name: register-s3-script
             configMap:
-              name: register-script
+              name: register-s3-script
       params:
         - name: MODEL_NAME
           value: $(params.MODEL_NAME)
         - name: MODEL_VERSION
           value: $(params.MODEL_VERSION)
-        - name: OCI_IMAGE
-          value: $(params.OCI_IMAGE)
+        - name: HUGGINGFACE_MODEL
+          value: $(params.HUGGINGFACE_MODEL)
+        - name: S3_BUCKET
+          value: $(params.S3_BUCKET)
         - name: SKIP_TASK
           value: "register-with-registry"
         - name: SKIP_TASKS
@@ -415,446 +307,4 @@ spec:
         - name: shared-workspace
           workspace: shared-workspace
       runAfter:
-        - build-and-push-modelcar
-    - name: deploy-model
-      taskSpec:
-        workspaces:
-          - name: shared-workspace
-        params:
-          - name: MODEL_NAME
-          - name: MODEL_VERSION
-          - name: OCI_IMAGE
-          - name: SKIP_TASK
-          - name: SKIP_TASKS
-          - name: DEPLOY_MODEL
-          - name: MAX_MODEL_LEN
-          - name: VLLM_ARGS
-        steps:
-          - name: check-deployment
-            image: quay.io/openshift/origin-cli:latest
-            script: |
-              #!/bin/sh
-              set -e
-              echo "Developed by the Red Hat AI Customer Adoption and Innovation team (CAI)"
-              if [[ ",$(params.SKIP_TASKS)," == *",$(params.SKIP_TASK),"* ]]; then
-                echo "Skipping deploy-model task"
-                exit 0
-              fi
-              if [ "$(params.DEPLOY_MODEL)" != "true" ]; then
-                echo "Model deployment skipped (DEPLOY_MODEL=false)"
-                exit 0
-              fi
-              echo "Preparing to deploy model..."
-              # Read model version ID
-              MODEL_VERSION_ID=$(cat /workspace/shared-workspace/model_version_id)
-              if [ -z "$MODEL_VERSION_ID" ]; then
-                echo "Error: Model version ID not found"
-                exit 1
-              fi
-              # Create ServingRuntime manifest
-              # Build args section step by step
-              echo "args:" > /tmp/vllm_args.txt
-              echo "        - '--port=8080'" >> /tmp/vllm_args.txt
-              echo "        - '--model=/mnt/models'" >> /tmp/vllm_args.txt
-              echo "        - '--served-model-name={{.Name}}'" >> /tmp/vllm_args.txt
-              echo "        - '--max-model-len=$(params.MAX_MODEL_LEN)'" >> /tmp/vllm_args.txt
-              
-              # Add additional vLLM arguments if provided
-              if [ ! -z "$(params.VLLM_ARGS)" ]; then
-                echo "Processing VLLM_ARGS: $(params.VLLM_ARGS)"
-                for arg in $(params.VLLM_ARGS); do
-                  echo "Adding argument: $arg"
-                  echo "        - '$arg'" >> /tmp/vllm_args.txt
-                done
-              fi
-              
-              
-              cat > /workspace/shared-workspace/servingruntime.yaml << EOF
-              apiVersion: serving.kserve.io/v1alpha1
-              kind: ServingRuntime
-              metadata:
-                annotations:
-                  opendatahub.io/accelerator-name: large-gpu-card
-                  opendatahub.io/apiProtocol: REST
-                  opendatahub.io/hardware-profile-name: large-gpu-card-bna9k-serving
-                  opendatahub.io/recommended-accelerators: '["nvidia.com/gpu"]'
-                  opendatahub.io/template-display-name: vLLM NVIDIA GPU ServingRuntime for KServe
-                  opendatahub.io/template-name: vllm-cuda-runtime
-                  openshift.io/display-name: $(echo $(params.MODEL_NAME) | tr '[:upper:]' '[:lower:]' | tr '/' '-' | tr '.' '-' | sed 's/[^a-z0-9-]//g')-$(echo $(params.MODEL_VERSION) | tr '.' '-')
-                name: $(echo $(params.MODEL_NAME) | tr '[:upper:]' '[:lower:]' | tr '/' '-' | tr '.' '-' | sed 's/[^a-z0-9-]//g')-$(echo $(params.MODEL_VERSION) | tr '.' '-')
-                namespace: $(oc project -q)
-                labels:
-                  opendatahub.io/dashboard: 'true'
-              spec:
-                annotations:
-                  prometheus.io/path: /metrics
-                  prometheus.io/port: '8080'
-                containers:
-                  - name: kserve-container
-                    image: 'registry.redhat.io/rhaiis/vllm-cuda-rhel9:3.2.0-1754088865-hotfix-1'
-                    $(cat /tmp/vllm_args.txt)
-                    env:
-                      - name: HF_HOME
-                        value: /tmp/hf_home
-                    ports:
-                      - containerPort: 8080
-                        protocol: TCP
-                    volumeMounts:
-                      - mountPath: /dev/shm
-                        name: shm
-                multiModel: false
-                supportedModelFormats:
-                  - autoSelect: true
-                    name: vLLM
-                volumes:
-                  - emptyDir:
-                      medium: Memory
-                      sizeLimit: 2Gi
-                    name: shm
-                serviceAccountName: modelcar-pipeline
-              EOF
-              echo "Created ServingRuntime manifest"
-              echo "=== Final ServingRuntime YAML ==="
-              cat -n /workspace/shared-workspace/servingruntime.yaml
-              echo "=== End of final YAML ==="
-              echo "Applying ServingRuntime..."
-              oc apply -f /workspace/shared-workspace/servingruntime.yaml
-              echo "ServingRuntime created"
-              # Create InferenceService manifest
-              cat > /workspace/shared-workspace/inferenceservice.yaml << EOF
-              apiVersion: serving.kserve.io/v1beta1
-              kind: InferenceService
-              metadata:
-                annotations:
-                  openshift.io/display-name: $(params.MODEL_NAME) - $(params.MODEL_VERSION)
-                  serving.knative.openshift.io/enablePassthrough: 'true'
-                  serving.kserve.io/deploymentMode: RawDeployment
-                  sidecar.istio.io/inject: 'true'
-                  sidecar.istio.io/rewriteAppHTTPProbers: 'true'
-                name: $(echo $(params.MODEL_NAME) | tr '[:upper:]' '[:lower:]' | tr '/' '-' | tr '.' '-' | sed 's/[^a-z0-9-]//g')-$(echo $(params.MODEL_VERSION) | tr '.' '-')
-                namespace: $(oc project -q)
-                finalizers:
-                  - odh.inferenceservice.finalizers
-                  - inferenceservice.finalizers
-                labels:
-                  modelregistry.opendatahub.io/model-version-id: '${MODEL_VERSION_ID}'
-                  modelregistry.opendatahub.io/name: registry
-                  opendatahub.io/dashboard: 'true'
-              spec:
-                predictor:
-                  serviceAccountName: modelcar-pipeline
-                  maxReplicas: 1
-                  minReplicas: 1
-                  model:
-                    modelFormat:
-                      name: vLLM
-                    name: ''
-                    resources:
-                      limits:
-                        cpu: '2'
-                        memory: 8Gi
-                        nvidia.com/gpu: '1'
-                      requests:
-                        cpu: '1'
-                        memory: 4Gi
-                        nvidia.com/gpu: '1'
-                    runtime: $(echo $(params.MODEL_NAME) | tr '[:upper:]' '[:lower:]' | tr '/' '-' | tr '.' '-' | sed 's/[^a-z0-9-]//g')-$(echo $(params.MODEL_VERSION) | tr '.' '-')
-                    storageUri: 'oci://$(echo $(params.OCI_IMAGE) | tr '[:upper:]' '[:lower:]'):$(params.MODEL_VERSION)'
-                  tolerations:
-                    - effect: NoSchedule
-                      key: nvidia.com/gpu
-                      operator: Exists
-                  imagePullSecrets:
-                    - name: quay-auth
-                serviceAccountName: modelcar-pipeline
-              EOF
-              echo "Created InferenceService manifest"
-              echo "Applying InferenceService..."
-              oc apply -f /workspace/shared-workspace/inferenceservice.yaml
-              echo "Model deployment initiated"
-      params:
-        - name: MODEL_NAME
-          value: $(params.MODEL_NAME)
-        - name: MODEL_VERSION
-          value: $(params.MODEL_VERSION)
-        - name: OCI_IMAGE
-          value: $(params.OCI_IMAGE)
-        - name: SKIP_TASK
-          value: "deploy-model"
-        - name: SKIP_TASKS
-          value: $(params.SKIP_TASKS)
-        - name: DEPLOY_MODEL
-          value: $(params.DEPLOY_MODEL)
-        - name: MAX_MODEL_LEN
-          value: $(params.MAX_MODEL_LEN)
-        - name: VLLM_ARGS
-          value: $(params.VLLM_ARGS)
-      workspaces:
-        - name: shared-workspace
-          workspace: shared-workspace
-      runAfter:
-        - register-with-registry
-    - name: wait-for-service
-      taskSpec:
-        workspaces:
-          - name: shared-workspace
-        params:
-          - name: MODEL_NAME
-          - name: MODEL_VERSION
-          - name: SKIP_TASK
-          - name: SKIP_TASKS
-          - name: DEPLOY_MODEL
-        steps:
-          - name: wait-for-ready
-            image: quay.io/openshift/origin-cli:latest
-            script: |
-              #!/bin/sh
-              set -e
-              echo "Developed by the Red Hat AI Customer Adoption and Innovation team (CAI)"
-              if [[ ",$(params.SKIP_TASKS)," == *",$(params.SKIP_TASK),"* ]]; then
-                echo "Skipping wait-for-service task"
-                exit 0
-              fi
-              if [ "$(params.DEPLOY_MODEL)" != "true" ]; then
-                echo "Model deployment skipped (DEPLOY_MODEL=false)"
-                exit 0
-              fi
-              SERVICE_NAME=$(echo $(params.MODEL_NAME) | tr '[:upper:]' '[:lower:]' | tr '/' '-' | tr '.' '-')-$(echo $(params.MODEL_VERSION) | tr '.' '-')
-              echo "Waiting for service $SERVICE_NAME to be ready..."
-              # Wait for the service to be ready
-              while true; do
-                STATUS=$(oc get inferenceservice $SERVICE_NAME -o jsonpath='{.status.conditions[?(@.type=="Ready")].status}')
-                if [ "$STATUS" = "True" ]; then
-                  echo "Service is ready!"
-                  break
-                fi
-                echo "Service not ready yet, waiting..."
-                sleep 10
-              done
-              # Get the external URL
-              EXTERNAL_URL=$(oc get inferenceservice $SERVICE_NAME -o jsonpath='{.status.url}')
-              echo "Service is available at: $EXTERNAL_URL"
-              # Add port 8080 for vLLM service
-              EXTERNAL_URL_WITH_PORT="${EXTERNAL_URL}:8080"
-              echo "Service URL with port: $EXTERNAL_URL_WITH_PORT"
-              # Save the URL for future reference
-              echo $EXTERNAL_URL_WITH_PORT > /workspace/shared-workspace/service_url
-              echo "Service URL with port saved to workspace"
-      params:
-        - name: MODEL_NAME
-          value: $(params.MODEL_NAME)
-        - name: MODEL_VERSION
-          value: $(params.MODEL_VERSION)
-        - name: SKIP_TASK
-          value: "wait-for-service"
-        - name: SKIP_TASKS
-          value: $(params.SKIP_TASKS)
-        - name: DEPLOY_MODEL
-          value: $(params.DEPLOY_MODEL)
-      workspaces:
-        - name: shared-workspace
-          workspace: shared-workspace
-      runAfter:
-        - deploy-model
-    - name: deploy-anything-llm
-      taskSpec:
-        workspaces:
-          - name: shared-workspace
-        params:
-          - name: MODEL_NAME
-          - name: MODEL_VERSION
-          - name: SKIP_TASK
-          - name: SKIP_TASKS
-          - name: DEPLOY_MODEL
-        steps:
-          - name: deploy-ui
-            image: quay.io/openshift/origin-cli:latest
-            script: |
-              #!/bin/sh
-              set -e
-              echo "Developed by the Red Hat AI Customer Adoption and Innovation team (CAI)"
-              if [[ ",$(params.SKIP_TASKS)," == *",$(params.SKIP_TASK),"* ]]; then
-                echo "Skipping deploy-anything-llm task"
-                exit 0
-              fi
-              if [ "$(params.DEPLOY_MODEL)" != "true" ]; then
-                echo "Model deployment skipped (DEPLOY_MODEL=false)"
-                exit 0
-              fi
-              echo "Deploying AnythingLLM UI..."
-              # Read service URL
-              SERVICE_URL=$(cat /workspace/shared-workspace/service_url)
-              if [ -z "$SERVICE_URL" ]; then
-                echo "Error: Service URL not found"
-                exit 1
-              fi
-              echo "Using service URL: $SERVICE_URL"
-              # Create AnythingLLM deployment
-              cat > /workspace/shared-workspace/anything-llm.yaml << EOF
-              apiVersion: apps/v1
-              kind: Deployment
-              metadata:
-                name: anything-llm
-                namespace: $(oc project -q)
-              spec:
-                replicas: 1
-                selector:
-                  matchLabels:
-                    app: anything-llm
-                template:
-                  metadata:
-                    labels:
-                      app: anything-llm
-                  spec:
-                    containers:
-                    - name: anything-llm
-                      image: quay.io/rh-aiservices-bu/anythingllm-workbench:latest
-                      ports:
-                      - containerPort: 3001
-                      env:
-                      - name: STORAGE_DIR
-                        value: "/app/server/storage"
-                      - name: LLM_PROVIDER
-                        value: "generic-openai"
-                      - name: GENERIC_OPEN_AI_BASE_PATH
-                        value: "${SERVICE_URL}/v1"
-                      - name: GENERIC_OPEN_AI_API_KEY
-                        value: ""
-                      - name: GENERIC_OPEN_AI_MODEL_PREF
-                        value: "$(echo $(params.MODEL_NAME) | tr '[:upper:]' '[:lower:]' | tr '/' '-' | tr '.' '-')-$(echo $(params.MODEL_VERSION) | tr '.' '-')"
-                      - name: GENERIC_OPEN_AI_MODEL_TOKEN_LIMIT
-                        value: "4096"
-                      - name: MODEL_BASE_PATH
-                        value: "${SERVICE_URL}"
-                      - name: VECTOR_DB
-                        value: "lancedb"
-                      - name: EMBEDDING_ENGINE
-                        value: "native"
-                      - name: DISABLE_TELEMETRY
-                        value: "true"
-                      volumeMounts:
-                      - name: storage
-                        mountPath: /app/server/storage
-                    volumes:
-                    - name: storage
-                      emptyDir: {}
-              ---
-              apiVersion: v1
-              kind: Service
-              metadata:
-                name: anything-llm
-                namespace: $(oc project -q)
-              spec:
-                selector:
-                  app: anything-llm
-                ports:
-                - port: 80
-                  targetPort: 3001
-                type: ClusterIP
-              ---
-              apiVersion: route.openshift.io/v1
-              kind: Route
-              metadata:
-                name: anything-llm
-                namespace: $(oc project -q)
-              spec:
-                to:
-                  kind: Service
-                  name: anything-llm
-                  weight: 100
-                port:
-                  targetPort: 3001
-                tls:
-                  termination: edge
-                  insecureEdgeTerminationPolicy: Allow
-                wildcardPolicy: None
-              EOF
-              echo "Created AnythingLLM manifests"
-              echo "Applying AnythingLLM deployment..."
-              oc apply -f /workspace/shared-workspace/anything-llm.yaml
-              echo "AnythingLLM deployment initiated"
-              # Wait for deployment to be ready
-              echo "Waiting for AnythingLLM to be ready..."
-              oc rollout status deployment/anything-llm
-              # Get the route URL
-              ROUTE_URL=$(oc get route anything-llm -o jsonpath='{.spec.host}')
-              echo "AnythingLLM is available at: https://${ROUTE_URL}"
-              # Save the URL for future reference
-              echo "https://${ROUTE_URL}" > /workspace/shared-workspace/anything-llm-url
-              echo "AnythingLLM URL saved to workspace"
-      params:
-        - name: MODEL_NAME
-          value: $(params.MODEL_NAME)
-        - name: MODEL_VERSION
-          value: $(params.MODEL_VERSION)
-        - name: SKIP_TASK
-          value: "deploy-anything-llm"
-        - name: SKIP_TASKS
-          value: $(params.SKIP_TASKS)
-        - name: DEPLOY_MODEL
-          value: $(params.DEPLOY_MODEL)
-      workspaces:
-        - name: shared-workspace
-          workspace: shared-workspace
-      runAfter:
-        - wait-for-service
-    - name: multilang-evaluate-model
-      taskRef:
-        name: multilang-evaluate-model
-      timeout: 3h
-      when:
-        - input: $(params.MULTILANG_EVALUATE_MODEL)
-          operator: in
-          values: ["true"]
-        - input: $(params.SKIP_TASKS)
-          operator: notin
-          values: ["multilang-evaluate-model"]
-      params:
-        - name: EVALUATE_MODEL
-          value: $(params.MULTILANG_EVALUATE_MODEL)
-        - name: SKIP_TASK
-          value: "multilang-evaluate-model"
-        - name: SKIP_TASKS
-          value: $(params.SKIP_TASKS)
-        - name: MODEL_NAME
-          value: $(params.MODEL_NAME)
-        - name: MODEL_VERSION
-          value: $(params.MODEL_VERSION)
-        - name: LANGUAGES
-          value: $(params.LANGUAGES)
-        - name: S3_ENABLED
-          value: $(params.S3_ENABLED)
-      workspaces:
-        - name: shared-workspace
-          workspace: shared-workspace
-      runAfter:
-        - wait-for-service
-    - name: trustyai-evaluate-model
-      taskRef:
-        name: trustyai-evaluate-model
-      timeout: 2h
-      when:
-        - input: $(params.TRUSTYAI_EVALUATE_MODEL)
-          operator: in
-          values: ["true"]
-        - input: $(params.SKIP_TASKS)
-          operator: notin
-          values: ["trustyai-evaluate-model"]
-      params:
-        - name: EVALUATE_MODEL
-          value: $(params.TRUSTYAI_EVALUATE_MODEL)
-        - name: SKIP_TASK
-          value: "trustyai-evaluate-model"
-        - name: SKIP_TASKS
-          value: $(params.SKIP_TASKS)
-        - name: MODEL_NAME
-          value: $(params.MODEL_NAME)
-        - name: MODEL_VERSION
-          value: $(params.MODEL_VERSION)
-        - name: TRUSTYAI_SERVICE_URL
-          value: $(params.TRUSTYAI_SERVICE_URL)
-      workspaces:
-        - name: shared-workspace
-          workspace: shared-workspace
-      runAfter:
-        - wait-for-service
+        - upload-model-to-s3

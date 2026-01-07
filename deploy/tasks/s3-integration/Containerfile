@@ -1,0 +1,17 @@
+FROM registry.access.redhat.com/ubi9/python-311:latest
+
+USER root
+
+# Install boto3 for S3 operations
+RUN pip install --no-cache-dir boto3
+
+# Copy the upload script
+COPY upload_model.py /usr/local/bin/upload_model.py
+RUN chmod +x /usr/local/bin/upload_model.py
+
+# Set non-root user
+USER 1001
+
+WORKDIR /workspace
+
+ENTRYPOINT ["python", "/usr/local/bin/upload_model.py"]

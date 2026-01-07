@@ -1,3 +1,273 @@
-= Section 2
+### **Phase 2: The ModelCar Supply Chain**
 
-This is _Section 2_ of _Chapter 1_ in the *hello* quick course....
+* **Persona:** AI Engineer (MLOps Focus)
+* **Zone:** **ZONE 2: DATA & MODELS**
+* **Executive Mandate:** "Eliminate Dependency Risk."
+* **The "Why Buy?":**
+* **Automated Provenance:** We don't just "download files." We trigger a pipeline that traces the exact SHA of the model, packages it, and signs it.
+* **No "Works on My Machine":** The build happens *on the cluster*, not on a developer's laptop.
+* **Offline Reliability:** Once the pipeline runs, the model is in *your* Quay registry. If Hugging Face goes down, your production stays up.
+
+
+
+---
+
+### **The Learning Journey: Phase 2 (Supply Chain)**
+
+Since you do not have **Podman** installed locally, we will use the power of OpenShift to build our tools *inside* the cluster. We will replace the manual local builds with **OpenShift Builds** (`oc new-build`).
+
+#### **Asset 1: The "Hook" (The Pitch)**
+
+* **Format:** 2-Minute Video / Slide
+* **Title:** "The Assembly Line: From Weights to Software"
+* **Script Concept:**
+> "Right now, your data scientists are downloading models like `Llama-3` directly to their workspaces. This is a security nightmare and an operational bottleneck.
+> In Phase 2, we deploy the **ModelCar Pipeline**. This is an automated assembly line built on **Tekton**.
+> You simply submit a `PipelineRun` with a model name. The system wakes up, downloads the weights, optimizes them, wraps them in an OCI container, pushes them to your private Quay registry, and registers the asset in the Model Registry.
+> It is zero-touch, fully auditable, and requires no local tools."
+
+
+
+#### **Asset 2: The "Anchor" (The Architecture)**
+
+* **Format:** Architecture Diagram
+* **Visual Focus:** The Tekton Workflow.
+* **Step 1:** `git-clone` (Fetch the packaging code).
+* **Step 2:** `pull-model` (Download from Hugging Face to PVC).
+* **Step 3:** `compress-model` (Optional: Run `granite-3.3` compression).
+* **Step 4:** `build-modelcar` (Package weights into OCI).
+* **Step 5:** `register-model` (Update MySQL Registry).
+
+
+
+#### **Asset 3: The "Payoff" (The Deployment Guide)**
+
+* **Format:** Markdown / Lab Guide
+* **Goal:** Deploy the pipeline and run your first model import without local Podman.
+
+**Step 1: Build the "Factory Workers" (The Builder Images)**
+Since you cannot build these locally, we will tell OpenShift to build them for us.
+
+```bash
+# Create the pipeline namespace
+oc new-project modelcar-pipelines
+
+# 1. Build the Hugging Face Downloader Image
+oc new-build --name=huggingface-builder \
+  --strategy=docker \
+  https://github.com/RedHatQuickCourses/genai-amep.git \
+  --context-dir=deploy/tasks/huggingface-modelcar-builder
+
+# 2. Build the ModelCar Packager Image
+oc new-build --name=modelcar-builder \
+  --strategy=docker \
+  https://github.com/RedHatQuickCourses/genai-amep.git \
+  --context-dir=deploy/tasks/build-and-push-modelcar
+
+# 3. Build the Registry Client Image
+oc new-build --name=registry-client \
+  --strategy=docker \
+  https://github.com/RedHatQuickCourses/genai-amep.git \
+  --context-dir=deploy/tasks/register-with-registry
+
+```
+
+*Adapted for "No Podman" scenario using OpenShift Builds.*
+
+**Step 2: Connect the Plumbing (Secrets & Config)**
+
+```bash
+# 1. Link Quay Credentials (so the pipeline can push)
+oc create secret docker-registry quay-auth-secret \
+  --docker-server=quay-registry-quay-registry.apps.cluster.domain \
+  --docker-username=amep-builder \
+  --docker-password=<YOUR_PASSWORD> \
+  -n modelcar-pipelines
+
+# 2. Link Hugging Face Token (for gated models)
+oc create secret generic huggingface-secret \
+  --from-literal=token=<YOUR_HF_TOKEN> \
+  -n modelcar-pipelines
+
+# 3. Create Storage for the Pipeline
+oc apply -f deploy/openshift/modelcar-storage.yaml -n modelcar-pipelines
+
+# 4. Deploy the Tekton Tasks & Pipeline
+# (Note: You must update the YAMLs to point to the image streams we built in Step 1)
+oc apply -f deploy/openshift/modelcar-pipeline.yaml -n modelcar-pipelines
+
+```
+
+**Step 3: Run the Pipeline (The "Button")**
+Trigger the pipeline to import a real model (`granite-3.3-2b-instruct`) into your factory.
+
+```yaml
+apiVersion: tekton.dev/v1beta1
+kind: PipelineRun
+metadata:
+  generateName: import-granite-
+  namespace: modelcar-pipelines
+spec:
+  pipelineRef:
+    name: modelcar-pipeline
+  params:
+    - name: HUGGINGFACE_MODEL
+      value: "ibm-granite/granite-3.3-2b-instruct"
+    - name: OCI_IMAGE
+      value: "quay-registry-quay-registry.apps.cluster.domain/amep-builder/granite-3.3-2b-instruct:1.0.0"
+    - name: MODEL_NAME
+      value: "granite-3.3-2b-instruct"
+    - name: MODEL_VERSION
+      value: "1.0.0"
+    - name: MODEL_REGISTRY_URL
+      value: "http://mysql.rhoai-model-registries.svc.cluster.local:3306"
+  workspaces:
+    - name: shared-workspace
+      persistentVolumeClaim:
+        claimName: modelcar-storage
+    - name: quay-auth-workspace
+      secret:
+        secretName: quay-auth-secret
+
+```
+
+**Step 4: Verification**
+
+1. Check the Pipeline Run in the OpenShift Console -> Pipelines.
+2. Once green, go to **RHOAI Dashboard** -> **Model Registry**.
+3. You will see `granite-3.3-2b-instruct` listed as `v1.0.0`.
+ter
+### **Next Step**
+
+This completes **Phase 2 (The Supply Chain)**. The model is now safely packaged and registered.
+
+Shall we move to **Phase 3 (Zone 3: Deploy)**, where we take this "ModelCar" and deploy it to a GPU-accelerated **vLLM** Serving Runtime?
+
+
+oc new-project modelcar-pipelines
+
+apiVersion: v1
+kind: List
+items:
+# 1. ImageStream Definitions (The "Placeholders" for the images)
+- apiVersion: image.openshift.io/v1
+  kind: ImageStream
+  metadata:
+    name: huggingface-modelcar-builder
+    namespace: modelcar-pipelines
+- apiVersion: image.openshift.io/v1
+  kind: ImageStream
+  metadata:
+    name: modelcar-builder
+    namespace: modelcar-pipelines
+- apiVersion: image.openshift.io/v1
+  kind: ImageStream
+  metadata:
+    name: modelcar-register
+    namespace: modelcar-pipelines
+
+# 2. BuildConfigs (The Instructions using Containerfile)
+- apiVersion: build.openshift.io/v1
+  kind: BuildConfig
+  metadata:
+    name: huggingface-builder
+    namespace: modelcar-pipelines
+  spec:
+    output:
+      to:
+        kind: ImageStreamTag
+        name: huggingface-modelcar-builder:latest
+    source:
+      git:
+        uri: https://github.com/RedHatQuickCourses/genai-amep.git
+      contextDir: deploy/tasks/huggingface-modelcar-builder
+    strategy:
+      dockerStrategy:
+        dockerfilePath: Containerfile # <--- THE FIX
+        
+- apiVersion: build.openshift.io/v1
+  kind: BuildConfig
+  metadata:
+    name: modelcar-builder
+    namespace: modelcar-pipelines
+  spec:
+    output:
+      to:
+        kind: ImageStreamTag
+        name: modelcar-builder:latest
+    source:
+      git:
+        uri: https://github.com/RedHatQuickCourses/genai-amep.git
+      contextDir: deploy/tasks/build-and-push-modelcar
+    strategy:
+      dockerStrategy:
+        dockerfilePath: Containerfile # <--- THE FIX
+
+- apiVersion: build.openshift.io/v1
+  kind: BuildConfig
+  metadata:
+    name: registry-client
+    namespace: modelcar-pipelines
+  spec:
+    output:
+      to:
+        kind: ImageStreamTag
+        name: modelcar-register:latest
+    source:
+      git:
+        uri: https://github.com/RedHatQuickCourses/genai-amep.git
+      contextDir: deploy/tasks/register-with-registry
+    strategy:
+      dockerStrategy:
+        dockerfilePath: Containerfile # <--- THE FIX
+
+
+        # 1. Apply the build configurations
+oc apply -f builders.yaml
+
+# 2. Manually trigger the builds to start immediately
+oc start-build huggingface-builder
+oc start-build modelcar-builder
+oc start-build registry-client
+
+# 3. Watch the logs to confirm success (Optional)
+oc logs -f bc/huggingface-builder
+
+
+oc create secret docker-registry quay-auth-secret \
+  --docker-server=quay-registry-quay-registry.apps.cluster.domain \
+  --docker-username=admin+amep \
+  --docker-password= \
+  -n modelcar-pipelines
+
+  oc create secret generic huggingface-secret \
+  --from-literal=token=h \
+  -n modelcar-pipelines
+
+
+  apiVersion: tekton.dev/v1beta1
+kind: PipelineRun
+metadata:
+  generateName: import-granite-
+  namespace: modelcar-pipelines
+spec:
+  pipelineRef:
+    name: modelcar-pipeline
+  params:
+    - name: HUGGINGFACE_MODEL
+      value: "ibm-granite/granite-3.3-2b-instruct"
+    - name: OCI_IMAGE
+      value: "quay-registry-quay-registry.apps.cluster.domain/amep-builder/granite-3.3-2b-instruct:1.0.0"
+    - name: MODEL_NAME
+      value: "granite-3.3-2b-instruct"
+    - name: MODEL_VERSION
+      value: "1.0.0"
+    - name: MODEL_REGISTRY_URL
+      value: "http://amep-model-registry .rhoai-model-registries.svc.cluster.local:8080"
+  workspaces:
+    - name: shared-workspace
+      persistentVolumeClaim:
+        claimName: modelcar-storage
+    - name: quay-auth-workspace
+      secret:
+        secretName: quay-auth-secret

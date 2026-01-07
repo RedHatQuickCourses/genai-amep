@@ -1,15 +1,16 @@
 = ModelCar Pipeline Deployment
 
-This guide covers the deployment and usage of the ModelCar pipeline, which automates the downloading, storage, and registration of AI models in OpenShift AI.
+This guide covers the deployment and usage of the ModelCar pipeline, which automates the packaging of AI models as OCI images on OpenShift AI.
 
 == Overview
 
-The ModelCar pipeline automates the workflow of downloading models from Hugging Face, storing them in S3-compatible storage, and registering them in the RHOAI Model Registry. It uses Tekton to orchestrate the following tasks:
+The ModelCar pipeline automates the workflow of downloading, optionally compressing, packaging, and registering AI models in the RHOAI Model Registry. It uses Tekton to orchestrate the following tasks:
 
 . Clean up workspace
 . Download model from Hugging Face
 . Compress model (optional)
-. Upload model to S3 storage (under `model-data/` folder)
+. Build ModelCar OCI image using OLOT
+. Push image to Quay registry
 . Register model in RHOAI Model Registry
 
 
@@ -17,11 +18,11 @@ The ModelCar pipeline automates the workflow of downloading models from Hugging 
 
 Before deploying the ModelCar pipeline, ensure you have completed:
 
-* xref:infrastructure-setup.adoc[Infrastructure Setup] - S3 Storage and Model Registry deployed
+* xref:infrastructure-setup.adoc[Infrastructure Setup] - Quay and Model Registry deployed
 * Pipeline namespace created (e.g., `modelcar-pipelines`)
 * Secrets configured:
-** `s3-credentials` - S3 access credentials (AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY)
-** `huggingface-secret` - Hugging Face token (for gated models, optional)
+** `quay-auth-secret` - Quay robot account credentials
+** `huggingface-secret` - Hugging Face token (for gated models)
 
 == Deploy Pipeline Tasks
 
@@ -38,33 +39,20 @@ oc apply -f deploy/openshift/modelcar-storage.yaml -n modelcar-pipelines
 
 This creates a PVC named `modelcar-storage` for storing model files during pipeline execution.
 
-=== Create S3 Credentials Secret
-
-The pipeline requires S3 credentials for uploading models:
-
-[source,bash]
-----
-# Create S3 credentials secret
-oc create secret generic s3-credentials \
-  --from-literal=AWS_ACCESS_KEY_ID=<YOUR_ACCESS_KEY> \
-  --from-literal=AWS_SECRET_ACCESS_KEY=<YOUR_SECRET_KEY> \
-  -n modelcar-pipelines
-----
-
 === Create Required ConfigMaps
 
 The pipeline requires ConfigMaps for compression and registration scripts:
 
 [source,bash]
 ----
-# Create compress-script ConfigMap (optional, only if using compression)
+# Create compress-script ConfigMap
 oc create configmap compress-script \
   --from-file=compress.py=deploy/tasks/compress/compress.py \
   -n modelcar-pipelines
 
-# Create S3 registration script ConfigMap
-oc create configmap register-s3-script \
-  --from-file=register_s3_model.py=deploy/tasks/register-with-registry/register_s3_model.py \
+# Create register-script ConfigMap
+oc create configmap register-script \
+  --from-file=register.py=deploy/tasks/register-with-registry/register.py \
   -n modelcar-pipelines
 ----
 
@@ -80,7 +68,7 @@ oc create serviceaccount modelcar-pipeline -n modelcar-pipelines
 
 [NOTE]
 ====
-The ModelCar pipeline stores models in S3 and registers them in the Model Registry. For model deployment and evaluation, use the xref:benchmark-pipeline.adoc[Benchmark Pipeline].
+The ModelCar pipeline focuses solely on packaging and registration. For model deployment and evaluation, use the xref:benchmark-pipeline.adoc[Benchmark Pipeline].
 ====
 
 === Deploy Pipeline Tasks
@@ -118,7 +106,7 @@ oc get serviceaccount modelcar-pipeline -n modelcar-pipelines
 
 === Basic Pipeline Run
 
-To download a model from Hugging Face and store it in S3:
+To package a model from Hugging Face:
 
 [source,bash]
 ----
@@ -134,31 +122,27 @@ spec:
   params:
     - name: HUGGINGFACE_MODEL
       value: "ibm-granite/granite-3.3-2b-instruct"
+    - name: OCI_IMAGE
+      value: "quay.io/<YOUR_ORG>/granite-3.3-2b-instruct"
     - name: MODEL_NAME
       value: "granite-3.3-2b-instruct"
     - name: MODEL_VERSION
       value: "1.0.0"
     - name: MODEL_REGISTRY_URL
       value: "http://mysql.rhoai-model-registries.svc.cluster.local:3306"
-    - name: S3_BUCKET
-      value: "models"
-    - name: S3_ENDPOINT_URL
-      value: "http://minio.minio.svc.cluster.local:9000"
   workspaces:
     - name: shared-workspace
       persistentVolumeClaim:
         claimName: modelcar-storage
-    - name: s3-credentials
+    - name: quay-auth-workspace
       secret:
-        secretName: s3-credentials
+        secretName: quay-auth-secret
 EOF
 ----
 
-NOTE: The model will be uploaded to S3 at the path: `s3://models/model-data/granite-3.3-2b-instruct/1.0.0/`
-
 === Pipeline with Model Compression
 
-To compress the model before uploading to S3:
+To compress the model before packaging:
 
 [source,bash]
 ----
@@ -174,6 +158,8 @@ spec:
   params:
     - name: HUGGINGFACE_MODEL
       value: "ibm-granite/granite-3.3-8b-instruct"
+    - name: OCI_IMAGE
+      value: "quay.io/<YOUR_ORG>/granite-3.3-8b-instruct-compressed"
     - name: MODEL_NAME
       value: "granite-3.3-8b-instruct-compressed"
     - name: MODEL_VERSION
@@ -182,34 +168,20 @@ spec:
       value: "true"
     - name: MODEL_REGISTRY_URL
       value: "http://mysql.rhoai-model-registries.svc.cluster.local:3306"
-    - name: S3_BUCKET
-      value: "models"
-    - name: S3_ENDPOINT_URL
-      value: "http://minio.minio.svc.cluster.local:9000"
   workspaces:
     - name: shared-workspace
       persistentVolumeClaim:
         claimName: modelcar-storage
-    - name: s3-credentials
+    - name: quay-auth-workspace
       secret:
-        secretName: s3-credentials
+        secretName: quay-auth-secret
 EOF
 ----
 
 
 === Pipeline with Gated Model
 
-For gated models requiring authentication, first create the HuggingFace secret:
-
-[source,bash]
-----
-# Create HuggingFace token secret
-oc create secret generic huggingface-secret \
-  --from-literal=HUGGINGFACE_TOKEN=<YOUR_HF_TOKEN> \
-  -n modelcar-pipelines
-----
-
-Then run the pipeline:
+For gated models requiring authentication:
 
 [source,bash]
 ----
@@ -225,27 +197,25 @@ spec:
   params:
     - name: HUGGINGFACE_MODEL
       value: "meta-llama/Llama-3.2-3B-Instruct"
+    - name: OCI_IMAGE
+      value: "quay.io/<YOUR_ORG>/llama-3.2-3b-instruct"
     - name: MODEL_NAME
       value: "llama-3.2-3b-instruct"
     - name: MODEL_VERSION
       value: "1.0.0"
     - name: MODEL_REGISTRY_URL
       value: "http://mysql.rhoai-model-registries.svc.cluster.local:3306"
-    - name: S3_BUCKET
-      value: "models"
-    - name: S3_ENDPOINT_URL
-      value: "http://minio.minio.svc.cluster.local:9000"
   workspaces:
     - name: shared-workspace
       persistentVolumeClaim:
         claimName: modelcar-storage
-    - name: s3-credentials
+    - name: quay-auth-workspace
       secret:
-        secretName: s3-credentials
+        secretName: quay-auth-secret
 EOF
 ----
 
-NOTE: The `huggingface-secret` must contain a valid token with access to the gated model.
+NOTE: Ensure the `huggingface-secret` contains a valid token with access to the gated model.
 
 == Pipeline Parameters Reference
 
@@ -257,6 +227,11 @@ The ModelCar pipeline supports the following parameters:
 
 |`HUGGINGFACE_MODEL`
 |Hugging Face model repository (e.g., `ibm-granite/granite-3.3-2b-instruct`)
+|Yes
+|N/A
+
+|`OCI_IMAGE`
+|Destination OCI image (e.g., `quay.io/org/model:tag`)
 |Yes
 |N/A
 
@@ -284,16 +259,6 @@ The ModelCar pipeline supports the following parameters:
 |URL of the model registry service
 |Yes
 |N/A
-
-|`S3_BUCKET`
-|S3 bucket name for model storage
-|Yes
-|`models`
-
-|`S3_ENDPOINT_URL`
-|S3 endpoint URL (for MinIO or S3-compatible storage)
-|No
-|``
 
 |`DEPLOY_MODEL`
 |Whether to deploy as InferenceService (`true`/`false`)
@@ -407,7 +372,7 @@ oc logs -l tekton.dev/pipelineRun=<PIPELINERUN_NAME> \
 
 The pipeline uses several custom container images that must be built and pushed to your registry:
 
-=== Hugging Face Model Downloader
+=== Hugging Face ModelCar Builder
 
 Location: `deploy/tasks/huggingface-modelcar-builder/`
 
@@ -420,20 +385,20 @@ podman build --platform linux/amd64 \
 podman push quay.io/<YOUR_ORG>/huggingface-modelcar-builder:latest
 ----
 
-=== S3 Uploader
+=== ModelCar Builder
 
-Location: `deploy/tasks/s3-integration/`
+Location: `deploy/tasks/build-and-push-modelcar/`
 
 [source,bash]
 ----
-cd deploy/tasks/s3-integration
+cd deploy/tasks/build-and-push-modelcar
 podman build --platform linux/amd64 \
-  -t quay.io/<YOUR_ORG>/s3-uploader:latest \
+  -t quay.io/<YOUR_ORG>/modelcar-builder:latest \
   -f Containerfile .
-podman push quay.io/<YOUR_ORG>/s3-uploader:latest
+podman push quay.io/<YOUR_ORG>/modelcar-builder:latest
 ----
 
-=== Model Registry Integration
+=== ModelCar Registry Integration
 
 Location: `deploy/tasks/register-with-registry/`
 
@@ -463,18 +428,17 @@ oc get secret huggingface-secret -n modelcar-pipelines
 # Visit https://huggingface.co/<MODEL_REPO> and verify access
 ----
 
-=== Pipeline Run Fails at S3 Upload Step
+=== Pipeline Run Fails at Push Step
 
-Check S3 credentials and connectivity:
+Check Quay authentication:
 
 [source,bash]
 ----
-# Verify S3 secret exists
-oc get secret s3-credentials -n modelcar-pipelines
+# Verify Quay secret exists
+oc get secret quay-auth-secret -n modelcar-pipelines
 
-# Test S3 connectivity (from a test pod)
-oc run s3-test --rm -it --image=amazon/aws-cli -n modelcar-pipelines -- \
-  s3 ls s3://<BUCKET_NAME> --endpoint-url=<S3_ENDPOINT_URL>
+# Test Quay login
+podman login <QUAY_ROUTE> --authfile=/path/to/auth.json
 ----
 
 === Model Registry Connection Issues

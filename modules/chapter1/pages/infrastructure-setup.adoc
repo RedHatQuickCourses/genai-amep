@@ -9,7 +9,7 @@ Before we can treat models like software, we need the "Factory Floor." This sect
 [NOTE]
 .Existing Infrastructure?
 ====
-If you already have access to an S3 bucket, an Image Registry (Quay), and the OpenShift AI Model Registry, you can **skip this page** and proceed to xref:modelcar-pipeline.adoc:index.adoc[Model pipeline deployment].
+If you already have access to an S3 bucket, an Image Registry (Quay), and the OpenShift AI Model Registry, you can **skip this page** and proceed to xref:modelcar-pipeline.adoc:index.adoc[ModelCar pipeline deployment].
 ====
 
 == 🏗️ Architecture Overview
@@ -92,7 +92,9 @@ oc get route -n s3-storage | grep s3-ui
 [WARNING]
 .Security Notice
 ====
-The default `minio-backend.yaml` uses generic passwords (`minio123`). For a production deployment, please rotate these credentials immediately.
+The default `minio-backend.yaml` uses generic passwords (`minio123`). For a production deployment, please rotate these credentials immediately. +
++
+The default persistent volume claim for minio is 100Gi, this may not be enough for larger models.
 ====
 
 Open the route to the MinIO Console (User: `minio`, Pass: `minio123`) and create these four buckets:
