@@ -68,6 +68,28 @@
   </li>
 </ul>
   </li>
+  <li class="nav-item" data-depth="0">
+<ul class="nav-list">
+  <li class="nav-item" data-depth="1">
+    <button class="nav-item-toggle"></button>
+    <a class="nav-link" href="../chapter2/index.html">Model Evaluation Lab</a>
+<ul class="nav-list">
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../chapter2/multilang-evaluation-lab.html">Multi-Language Evaluation</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../chapter2/performance-evaluation-lab.html">Performance Benchmarking</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../chapter2/domain-evaluation-lab.html">Domain-Specific Evaluation</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../chapter2/results-collection.html">Results Collection &amp; Visualization</a>
+  </li>
+</ul>
+  </li>
+</ul>
+  </li>
 </ul>
   </nav>
 </div>
@@ -128,9 +150,6 @@
 </li>
 <li>
 <p>Download model from Hugging Face</p>
-</li>
-<li>
-<p>Compress model (optional)</p>
 </li>
 <li>
 <p>Upload model to S3 storage (under <code>model-data/</code> folder)</p>
@@ -211,16 +230,11 @@ oc create secret generic s3-credentials \
 <div class="sect2">
 <h3 id="_create_required_configmaps"><a class="anchor" href="#_create_required_configmaps"></a>Create Required ConfigMaps</h3>
 <div class="paragraph">
-<p>The pipeline requires ConfigMaps for compression and registration scripts:</p>
+<p>The pipeline requires a ConfigMap for the S3 registration script:</p>
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash"># Create compress-script ConfigMap (optional, only if using compression)
-oc create configmap compress-script \
-  --from-file=compress.py=deploy/tasks/compress/compress.py \
-  -n modelcar-pipelines
-
-# Create S3 registration script ConfigMap
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash"># Create S3 registration script ConfigMap
 oc create configmap register-s3-script \
   --from-file=register_s3_model.py=deploy/tasks/register-with-registry/register_s3_model.py \
   -n modelcar-pipelines</code></pre>
@@ -228,15 +242,37 @@ oc create configmap register-s3-script \
 </div>
 </div>
 <div class="sect2">
-<h3 id="_create_serviceaccount"><a class="anchor" href="#_create_serviceaccount"></a>Create ServiceAccount</h3>
+<h3 id="_create_serviceaccount_and_rbac"><a class="anchor" href="#_create_serviceaccount_and_rbac"></a>Create ServiceAccount and RBAC</h3>
 <div class="paragraph">
-<p>The pipeline needs a ServiceAccount for accessing the workspace and registry:</p>
+<p>The pipeline needs a ServiceAccount with proper permissions for accessing the workspace, secrets, and Model Registry:</p>
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash"># Create ServiceAccount
-oc create serviceaccount modelcar-pipeline -n modelcar-pipelines</code></pre>
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash"># Create ServiceAccount with RBAC permissions
+oc apply -f deploy/openshift/modelcar-rbac.yaml</code></pre>
 </div>
+</div>
+<div class="paragraph">
+<p>This creates:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p>ServiceAccount: <code>modelcar-pipeline</code></p>
+</li>
+<li>
+<p>Role: <code>modelcar-pipeline-role</code> (namespace-scoped permissions)</p>
+</li>
+<li>
+<p>RoleBinding: <code>modelcar-pipeline-binding</code></p>
+</li>
+<li>
+<p>ClusterRole: <code>modelcar-model-registry-access</code> (for cross-namespace Model Registry access)</p>
+</li>
+<li>
+<p>ClusterRoleBinding: <code>modelcar-model-registry-access</code></p>
+</li>
+</ul>
 </div>
 <div class="admonitionblock note">
 <table>
@@ -254,18 +290,6 @@ oc create serviceaccount modelcar-pipeline -n modelcar-pipelines</code></pre>
 </div>
 </div>
 <div class="sect2">
-<h3 id="_deploy_pipeline_tasks_2"><a class="anchor" href="#_deploy_pipeline_tasks_2"></a>Deploy Pipeline Tasks</h3>
-<div class="paragraph">
-<p>Deploy the individual Tekton tasks that the pipeline references:</p>
-</div>
-<div class="listingblock">
-<div class="content">
-<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash"># Deploy compression task (optional, only needed if using COMPRESS_MODEL=true)
-oc apply -f deploy/openshift/modelcar-compress-task.yaml -n modelcar-pipelines</code></pre>
-</div>
-</div>
-</div>
-<div class="sect2">
 <h3 id="_deploy_main_pipeline"><a class="anchor" href="#_deploy_main_pipeline"></a>Deploy Main Pipeline</h3>
 <div class="paragraph">
 <p>Deploy the main ModelCar pipeline:</p>
@@ -275,18 +299,30 @@ oc apply -f deploy/openshift/modelcar-compress-task.yaml -n modelcar-pipelines</
 <pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">oc apply -f deploy/openshift/modelcar-pipeline.yaml -n modelcar-pipelines</code></pre>
 </div>
 </div>
-</div>
-<div class="sect2">
-<h3 id="_verify_pipeline_deployment"><a class="anchor" href="#_verify_pipeline_deployment"></a>Verify Pipeline Deployment</h3>
+<div class="sect3">
+<h4 id="_verify_pipeline_deployment"><a class="anchor" href="#_verify_pipeline_deployment"></a>Verify Pipeline Deployment</h4>
 <div class="paragraph">
-<p>Check that all tasks and the pipeline are created:</p>
+<p>Check that the pipeline and all components are created:</p>
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">oc get tasks -n modelcar-pipelines
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash"># Check pipeline
 oc get pipelines -n modelcar-pipelines
-oc get configmaps -n modelcar-pipelines | grep -E "(compress-script|register-script)"
-oc get serviceaccount modelcar-pipeline -n modelcar-pipelines</code></pre>
+
+# Check ConfigMaps
+oc get configmaps -n modelcar-pipelines | grep register-s3-script
+
+# Check ServiceAccount and RBAC
+oc get serviceaccount modelcar-pipeline -n modelcar-pipelines
+oc get role modelcar-pipeline-role -n modelcar-pipelines
+oc get clusterrole modelcar-model-registry-access
+
+# Check storage
+oc get pvc modelcar-storage -n modelcar-pipelines
+
+# Check secrets
+oc get secret s3-credentials -n modelcar-pipelines</code></pre>
+</div>
 </div>
 </div>
 </div>
@@ -345,48 +381,6 @@ The model will be uploaded to S3 at the path: <code>s3://models/model-data/grani
 </td>
 </tr>
 </table>
-</div>
-</div>
-<div class="sect2">
-<h3 id="_pipeline_with_model_compression"><a class="anchor" href="#_pipeline_with_model_compression"></a>Pipeline with Model Compression</h3>
-<div class="paragraph">
-<p>To compress the model before uploading to S3:</p>
-</div>
-<div class="listingblock">
-<div class="content">
-<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">oc create -f - &lt;&lt;EOF
-apiVersion: tekton.dev/v1beta1
-kind: PipelineRun
-metadata:
-  generateName: modelcar-compress-run-
-  namespace: modelcar-pipelines
-spec:
-  pipelineRef:
-    name: modelcar-pipeline
-  params:
-    - name: HUGGINGFACE_MODEL
-      value: "ibm-granite/granite-3.3-8b-instruct"
-    - name: MODEL_NAME
-      value: "granite-3.3-8b-instruct-compressed"
-    - name: MODEL_VERSION
-      value: "1.0.0"
-    - name: COMPRESS_MODEL
-      value: "true"
-    - name: MODEL_REGISTRY_URL
-      value: "http://mysql.rhoai-model-registries.svc.cluster.local:3306"
-    - name: S3_BUCKET
-      value: "models"
-    - name: S3_ENDPOINT_URL
-      value: "http://minio.minio.svc.cluster.local:9000"
-  workspaces:
-    - name: shared-workspace
-      persistentVolumeClaim:
-        claimName: modelcar-storage
-    - name: s3-credentials
-      secret:
-        secretName: s3-credentials
-EOF</code></pre>
-</div>
 </div>
 </div>
 <div class="sect2">

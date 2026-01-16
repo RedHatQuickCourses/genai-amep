@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width,initial-scale=1">
-    <title>The secret name usually follows the pattern &lt;model-name&gt;-sa-token :: Automated Multi Language LLM Evaluation Pipeline</title>
+    <title>Untitled :: Automated Multi Language LLM Evaluation Pipeline</title>
     <meta name="generator" content="Antora 3.1.3">
     <link rel="stylesheet" href="../../../_/css/site.css">
     <script>var uiRootPath = '../../../_'</script>
@@ -66,6 +66,28 @@
   </li>
 </ul>
   </li>
+  <li class="nav-item" data-depth="0">
+<ul class="nav-list">
+  <li class="nav-item" data-depth="1">
+    <button class="nav-item-toggle"></button>
+    <a class="nav-link" href="../chapter2/index.html">Model Evaluation Lab</a>
+<ul class="nav-list">
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../chapter2/multilang-evaluation-lab.html">Multi-Language Evaluation</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../chapter2/performance-evaluation-lab.html">Performance Benchmarking</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../chapter2/domain-evaluation-lab.html">Domain-Specific Evaluation</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../chapter2/results-collection.html">Results Collection &amp; Visualization</a>
+  </li>
+</ul>
+  </li>
+</ul>
+  </li>
 </ul>
   </nav>
 </div>
@@ -93,10 +115,6 @@
 <button class="nav-toggle"></button>
   <a href="../index.html" class="home-link"></a>
 <nav class="breadcrumbs" aria-label="breadcrumbs">
-  <ul>
-    <li><a href="../index.html">Automated Multi-Language LLM Evaluation Pipeline</a></li>
-    <li><a href="section3.html">The secret name usually follows the pattern &lt;model-name&gt;-sa-token</a></li>
-  </ul>
 </nav>
 </div>
   <div class="content">
@@ -104,7 +122,49 @@
   <div class="toc-menu"></div>
 </aside>
 <article class="doc">
-<h1 class="page">The secret name usually follows the pattern &lt;model-name&gt;-sa-token</h1>
+<div class="paragraph">
+<p>oc create secret generic s3-credentials \
+  --from-literal=AWS_ACCESS_KEY_ID=minio \
+  --from-literal=AWS_SECRET_ACCESS_KEY=minio123 \
+  -n modelcar-pipelines</p>
+</div>
+<div class="paragraph">
+<p>oc create -f - &lt;&lt;EOF
+apiVersion: tekton.dev/v1beta1
+kind: PipelineRun
+metadata:
+  generateName: modelcar-run-
+  namespace: modelcar-pipelines
+spec:
+  pipelineRef:
+    name: modelcar-pipeline
+  params:
+    - name: HUGGINGFACE_MODEL
+      value: "ibm-granite/granite-3.3-2b-instruct"
+    - name: MODEL_NAME
+      value: "granite-3.3-2b-instruct"
+    - name: MODEL_VERSION
+      value: "1.0.0"
+    - name: MODEL_REGISTRY_URL
+      value: "http://mysql.rhoai-model-registries.svc.cluster.local:3306"
+    - name: S3_BUCKET
+      value: "models"
+    - name: S3_ENDPOINT_URL
+      value: "https://minio-api-s3-storage.apps.ocp.c9mlf.sandbox1049.opentlc.com"
+  workspaces:
+    - name: shared-workspace
+      persistentVolumeClaim:
+        claimName: modelcar-storage
+    - name: s3-credentials
+      secret:
+        secretName: s3-credentials
+EOF</p>
+</div>
+<h1 id="_the_secret_name_usually_follows_the_pattern_model_name_sa_token" class="sect0"><a class="anchor" href="#_the_secret_name_usually_follows_the_pattern_model_name_sa_token"></a>The secret name usually follows the pattern &lt;model-name&gt;-sa-token</h1>
+<div class="paragraph">
+<p>SECRET_NAME=$(oc get serviceaccount qwen -o jsonpath='{.secrets[0].name}')
+export TOKEN=$(oc get secret $SECRET_NAME -o jsonpath='{.data.token}' | base64 -d)</p>
+</div>
 <div class="paragraph">
 <p>export INFERENCE_URL=$http://a0ed0be8f4d804438bf7411d85f32fcc-2012662907.us-east-2.elb.amazonaws.com/my-ai-lab/qwen
 echo "Targeting: <a href="https://$INFERENCE_URL"" class="bare">https://$INFERENCE_URL"</a></p>

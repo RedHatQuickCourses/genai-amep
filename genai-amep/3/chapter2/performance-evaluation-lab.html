@@ -1,0 +1,630 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>Lab: Performance Benchmarking with GuideLLM :: Automated Multi Language LLM Evaluation Pipeline</title>
+    <link rel="prev" href="multilang-evaluation-lab.html">
+    <link rel="next" href="domain-evaluation-lab.html">
+    <meta name="generator" content="Antora 3.1.3">
+    <link rel="stylesheet" href="../../../_/css/site.css">
+    <script>var uiRootPath = '../../../_'</script>
+  </head>
+  <body class="article">
+<header class="header">
+  <nav class="navbar">
+    <div class="navbar-brand">
+      <a class="navbar-item" href="https://www.redhat.com" target="_blank"><img src="../../../_/img/redhat-logo.png" height="40px" alt="Red Hat"></a>
+      <a class="navbar-item" style="font-size: 24px; color: white" href="../../..">Automated Multi Language LLM Evaluation Pipeline</a>
+      <button class="navbar-burger" data-target="topbar-nav">
+        <span></span>
+        <span></span>
+        <span></span>
+      </button>
+    </div>
+    <div id="topbar-nav" class="navbar-menu">
+      <div class="navbar-end">
+        <a class="navbar-item" href="https://github.com/RedHatQuickCourses/changeme/issues" target="_blank">Report Issues</a>
+      </div>
+    </div>
+  </nav>
+</header><div class="body">
+<div class="nav-container" data-component="genai-amep" data-version="3">
+  <aside class="nav">
+    <div class="panels">
+<div class="nav-panel-menu is-active" data-panel="menu">
+  <nav class="nav-menu">
+    <h3 class="title"><a href="../index.html">Automated Multi-Language LLM Evaluation Pipeline</a></h3>
+<ul class="nav-list">
+  <li class="nav-item" data-depth="0">
+<ul class="nav-list">
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../index.html">Introduction</a>
+  </li>
+</ul>
+  </li>
+  <li class="nav-item" data-depth="0">
+<ul class="nav-list">
+  <li class="nav-item" data-depth="1">
+    <button class="nav-item-toggle"></button>
+    <a class="nav-link" href="../chapter1/index.html">Platform preparation</a>
+<ul class="nav-list">
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../chapter1/infrastructure-setup.html">Infrastructure setup</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../chapter1/modelcar-pipeline.html">ModelCar Pipeline Deployment</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../chapter1/benchmark-pipeline.html">Benchmark Pipeline Deployment</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../chapter1/evaluation-pipeline.html">Evaluation Pipeline Deployment</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../chapter1/results-analysis.html">Results Analysis and Visualization</a>
+  </li>
+</ul>
+  </li>
+</ul>
+  </li>
+  <li class="nav-item" data-depth="0">
+<ul class="nav-list">
+  <li class="nav-item" data-depth="1">
+    <button class="nav-item-toggle"></button>
+    <a class="nav-link" href="index.html">Model Evaluation Lab</a>
+<ul class="nav-list">
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="multilang-evaluation-lab.html">Multi-Language Evaluation</a>
+  </li>
+  <li class="nav-item is-current-page" data-depth="2">
+    <a class="nav-link" href="performance-evaluation-lab.html">Performance Benchmarking</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="domain-evaluation-lab.html">Domain-Specific Evaluation</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="results-collection.html">Results Collection &amp; Visualization</a>
+  </li>
+</ul>
+  </li>
+</ul>
+  </li>
+</ul>
+  </nav>
+</div>
+<div class="nav-panel-explore" data-panel="explore">
+  <div class="context">
+    <span class="title">Automated Multi-Language LLM Evaluation Pipeline</span>
+    <span class="version">3</span>
+  </div>
+  <ul class="components">
+    <li class="component is-current">
+      <a class="title" href="../index.html">Automated Multi-Language LLM Evaluation Pipeline</a>
+      <ul class="versions">
+        <li class="version is-current is-latest">
+          <a href="../index.html">3</a>
+        </li>
+      </ul>
+    </li>
+  </ul>
+</div>
+    </div>
+  </aside>
+</div>
+<main class="article">
+<div class="toolbar" role="navigation">
+<button class="nav-toggle"></button>
+  <a href="../index.html" class="home-link"></a>
+<nav class="breadcrumbs" aria-label="breadcrumbs">
+  <ul>
+    <li><a href="../index.html">Automated Multi-Language LLM Evaluation Pipeline</a></li>
+    <li><a href="index.html">Model Evaluation Lab</a></li>
+    <li><a href="performance-evaluation-lab.html">Performance Benchmarking</a></li>
+  </ul>
+</nav>
+</div>
+  <div class="content">
+<aside class="toc sidebar" data-title="Contents" data-levels="2">
+  <div class="toc-menu"></div>
+</aside>
+<article class="doc">
+<h1 class="page">Lab: Performance Benchmarking with GuideLLM</h1>
+<div id="preamble">
+<div class="sectionbody">
+<div class="paragraph lead">
+<p><strong>Performance is where cost meets user experience.</strong></p>
+</div>
+<div class="paragraph">
+<p>A model that is accurate but too slow will fail in production. In this lab, you will measure your model&#8217;s system performance using <strong>GuideLLM</strong>—the industry-standard tool for LLM performance benchmarking.</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_why_performance_evaluation_matters"><a class="anchor" href="#_why_performance_evaluation_matters"></a>Why Performance Evaluation Matters</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>System performance directly impacts:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p><strong>User Experience:</strong> Latency determines response time. Users expect sub-second responses in interactive applications.</p>
+</li>
+<li>
+<p><strong>Cost Efficiency:</strong> Throughput determines how many requests you can serve per GPU. Higher throughput = lower cost per request.</p>
+</li>
+<li>
+<p><strong>Scalability:</strong> Resource utilization determines how many concurrent users you can support.</p>
+</li>
+<li>
+<p><strong>Deployment Readiness:</strong> Performance metrics inform architectural decisions (batching, caching, distributed serving).</p>
+</li>
+</ul>
+</div>
+<div class="paragraph">
+<p>This lab uses <strong>GuideLLM</strong> to measure:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p><strong>Latency:</strong> Time to first token (TTFT) and inter-token latency</p>
+</li>
+<li>
+<p><strong>Throughput:</strong> Requests per second (RPS) and tokens per second (TPS)</p>
+</li>
+<li>
+<p><strong>Resource Utilization:</strong> GPU and memory usage under load</p>
+</li>
+</ul>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_prerequisites"><a class="anchor" href="#_prerequisites"></a>Prerequisites</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>Before starting, ensure:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p>Your InferenceService is deployed and in "Ready" state</p>
+</li>
+<li>
+<p>You know your model&#8217;s inference endpoint URL</p>
+</li>
+<li>
+<p>Tekton is installed in your cluster</p>
+</li>
+<li>
+<p>You have access to create Tekton TaskRuns</p>
+</li>
+<li>
+<p>S3 storage is available for results</p>
+</li>
+</ul>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_step_1_deploy_guidellm_benchmark_task"><a class="anchor" href="#_step_1_deploy_guidellm_benchmark_task"></a>Step 1: Deploy GuideLLM Benchmark Task</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>First, we&#8217;ll deploy the GuideLLM benchmark task to your cluster:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash"># Set your namespace
+export NAMESPACE="vllm"  # or your model namespace
+
+# Clone the GuideLLM pipeline repository (if not already available)
+cd ~
+git clone https://github.com/RedHatQuickCourses/guidellm-pipeline.git || echo "Repository may already exist"
+cd guidellm-pipeline
+
+# Apply the GuideLLM benchmark task
+oc apply -f pipeline/guidellm-benchmark-task.yaml -n ${NAMESPACE}
+
+# Verify the task is created
+oc get task guidellm-benchmark -n ${NAMESPACE}</code></pre>
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_step_2_create_storage_for_results"><a class="anchor" href="#_step_2_create_storage_for_results"></a>Step 2: Create Storage for Results</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>Create a PersistentVolumeClaim to store benchmark results:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash"># Create PVC for benchmark results
+cat &gt; guidellm-pvc.yaml &lt;&lt;EOF
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: guidellm-output-pvc
+  namespace: ${NAMESPACE}
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 10Gi
+EOF
+
+oc apply -f guidellm-pvc.yaml</code></pre>
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_step_3_identify_your_model_endpoint"><a class="anchor" href="#_step_3_identify_your_model_endpoint"></a>Step 3: Identify Your Model Endpoint</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>Get your model&#8217;s inference endpoint:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash"># Set your model name
+export MODEL_NAME="granite-4.0-micro"  # your model name
+
+# Get the inference endpoint
+export INFERENCE_URL=$(oc get inferenceservice $MODEL_NAME -n ${NAMESPACE} \
+  -o jsonpath='{.status.url}')
+echo "Inference URL: $INFERENCE_URL"
+
+# For GuideLLM, we need the /v1 endpoint
+export TARGET_ENDPOINT="${INFERENCE_URL}/v1"
+echo "Target endpoint: $TARGET_ENDPOINT"</code></pre>
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_step_4_run_performance_benchmark"><a class="anchor" href="#_step_4_run_performance_benchmark"></a>Step 4: Run Performance Benchmark</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>Now we&#8217;ll run the GuideLLM benchmark. We&#8217;ll use a <strong>sweep</strong> test that automatically tests multiple request rates:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash"># Set benchmark parameters
+export PROCESSOR="ibm-granite/granite-4.0-micro"  # Hugging Face model path for tokenizer
+export DATA_CONFIG="prompt_tokens=512,output_tokens=128"  # Workload profile
+export MAX_SECONDS="60"  # Maximum test duration
+export RATE_TYPE="sweep"  # Test multiple rates automatically
+export RATE="1.0,2.0,4.0,8.0"  # Request rates to test (requests per second)
+export MAX_CONCURRENCY="10"  # Maximum concurrent requests
+
+# Create TaskRun
+cat &gt; guidellm-benchmark-run.yaml &lt;&lt;EOF
+apiVersion: tekton.dev/v1
+kind: TaskRun
+metadata:
+  generateName: guidellm-benchmark-
+  namespace: ${NAMESPACE}
+spec:
+  taskRef:
+    name: guidellm-benchmark
+  params:
+    - name: target
+      value: ${TARGET_ENDPOINT}
+    - name: model-name
+      value: ${MODEL_NAME}
+    - name: processor
+      value: ${PROCESSOR}
+    - name: data-config
+      value: ${DATA_CONFIG}
+    - name: max-seconds
+      value: ${MAX_SECONDS}
+    - name: rate-type
+      value: ${RATE_TYPE}
+    - name: rate
+      value: ${RATE}
+    - name: max-concurrency
+      value: ${MAX_CONCURRENCY}
+    - name: api-key
+      value: ""
+    - name: huggingface-token
+      value: ""
+    - name: output-filename
+      value: ${MODEL_NAME}-performance-results.yaml
+    - name: s3-api-endpoint
+      value: http://minio-service.s3-storage.svc.cluster.local:9000
+    - name: s3-access-key-id
+      value: minio
+    - name: s3-secret-access-key
+      value: minio123
+    - name: custom-data
+      value: "False"
+  workspaces:
+    - name: shared-workspace
+      persistentVolumeClaim:
+        claimName: guidellm-output-pvc
+  timeout: 30m
+EOF
+
+# Apply and run the TaskRun
+oc create -f guidellm-benchmark-run.yaml</code></pre>
+</div>
+</div>
+<div class="admonitionblock note">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-note" title="Note"></i>
+</td>
+<td class="content">
+<div class="title">Benchmark Parameters Explained</div>
+<div class="ulist">
+<ul>
+<li>
+<p><strong>data-config:</strong> Defines the workload profile. <code>prompt_tokens=512,output_tokens=128</code> means each request has a 512-token prompt and generates 128 tokens.</p>
+</li>
+<li>
+<p><strong>rate-type:</strong> <code>sweep</code> tests multiple rates automatically, <code>fixed</code> tests a single rate.</p>
+</li>
+<li>
+<p><strong>rate:</strong> Request rates to test (requests per second). Higher rates test system limits.</p>
+</li>
+<li>
+<p><strong>max-concurrency:</strong> Maximum number of concurrent requests. This simulates real-world load.</p>
+</li>
+</ul>
+</div>
+</td>
+</tr>
+</table>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_step_5_monitor_benchmark_progress"><a class="anchor" href="#_step_5_monitor_benchmark_progress"></a>Step 5: Monitor Benchmark Progress</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>Watch the TaskRun progress:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash"># Get the TaskRun name
+TASKRUN_NAME=$(oc get taskrun -n ${NAMESPACE} -l tekton.dev/task=guidellm-benchmark \
+  --sort-by=.metadata.creationTimestamp -o jsonpath='{.items[-1].metadata.name}')
+
+echo "Monitoring TaskRun: $TASKRUN_NAME"
+
+# Watch TaskRun status
+oc get taskrun $TASKRUN_NAME -n ${NAMESPACE} -w</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Monitor the pod logs to see benchmark progress:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash"># Get the pod name
+POD_NAME=$(oc get pods -n ${NAMESPACE} -l tekton.dev/taskRun=$TASKRUN_NAME \
+  -o jsonpath='{.items[0].metadata.name}')
+
+# Watch logs
+oc logs -f $POD_NAME -n ${NAMESPACE}</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>The benchmark will take 5-15 minutes depending on your configuration. You&#8217;ll see progress updates showing:
+* Current request rate being tested
+* Latency percentiles (p50, p95, p99)
+* Throughput metrics
+* Success/failure rates</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_step_6_extract_results"><a class="anchor" href="#_step_6_extract_results"></a>Step 6: Extract Results</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>Once the benchmark completes, extract the results:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash"># Create results directory
+mkdir -p ~/evaluation-results/performance
+cd ~/evaluation-results/performance
+
+# Get the pod that has the results
+POD_NAME=$(oc get pods -n ${NAMESPACE} -l tekton.dev/taskRun=$TASKRUN_NAME \
+  -o jsonpath='{.items[0].metadata.name}')
+
+# Copy results from the workspace
+oc cp ${NAMESPACE}/$POD_NAME:/workspace/shared-workspace/${MODEL_NAME}-performance-results.yaml \
+  ./${MODEL_NAME}-performance-results.yaml
+
+echo "✅ Results extracted to: ./${MODEL_NAME}-performance-results.yaml"</code></pre>
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_step_7_upload_results_to_s3"><a class="anchor" href="#_step_7_upload_results_to_s3"></a>Step 7: Upload Results to S3</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>Upload the results to S3 for later analysis:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash"># Set S3 configuration
+export S3_ENDPOINT="http://minio-service.s3-storage.svc.cluster.local:9000"
+export S3_BUCKET="model-evaluations"
+export S3_ACCESS_KEY="minio"
+export S3_SECRET_KEY="minio123"
+
+# Upload results
+oc run aws-cli-upload --rm -i --restart=Never \
+  --image=amazon/aws-cli:latest \
+  --env="AWS_ACCESS_KEY_ID=${S3_ACCESS_KEY}" \
+  --env="AWS_SECRET_ACCESS_KEY=${S3_SECRET_KEY}" \
+  --env="AWS_DEFAULT_REGION=us-east-1" \
+  -- sh -c "
+    aws --endpoint-url=${S3_ENDPOINT} s3 mb s3://${S3_BUCKET} || true
+
+    TIMESTAMP=\$(date +%Y%m%d_%H%M%S)
+    MODEL_ID=\"${MODEL_NAME}_v1.0\"
+
+    aws --endpoint-url=${S3_ENDPOINT} s3 cp \
+      ~/evaluation-results/performance/${MODEL_NAME}-performance-results.yaml \
+      s3://${S3_BUCKET}/performance/\${MODEL_ID}/\${TIMESTAMP}/performance-results.yaml
+
+    echo \"✅ Results uploaded to: s3://${S3_BUCKET}/performance/\${MODEL_ID}/\${TIMESTAMP}/\"
+  "</code></pre>
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_understanding_the_results"><a class="anchor" href="#_understanding_the_results"></a>Understanding the Results</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>The GuideLLM results include:</p>
+</div>
+<div class="sect2">
+<h3 id="_latency_metrics"><a class="anchor" href="#_latency_metrics"></a>Latency Metrics</h3>
+<div class="ulist">
+<ul>
+<li>
+<p><strong>Time to First Token (TTFT):</strong> How long until the first token is generated</p>
+</li>
+<li>
+<p><strong>Inter-Token Latency:</strong> Average time between tokens</p>
+</li>
+<li>
+<p><strong>End-to-End Latency:</strong> Total time for a complete request</p>
+</li>
+<li>
+<p><strong>Percentiles:</strong> p50, p95, p99 latency values</p>
+</li>
+</ul>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_throughput_metrics"><a class="anchor" href="#_throughput_metrics"></a>Throughput Metrics</h3>
+<div class="ulist">
+<ul>
+<li>
+<p><strong>Requests Per Second (RPS):</strong> How many requests the system can handle</p>
+</li>
+<li>
+<p><strong>Tokens Per Second (TPS):</strong> Token generation rate</p>
+</li>
+<li>
+<p><strong>Successful Requests:</strong> Percentage of requests that completed successfully</p>
+</li>
+</ul>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_resource_metrics"><a class="anchor" href="#_resource_metrics"></a>Resource Metrics</h3>
+<div class="ulist">
+<ul>
+<li>
+<p><strong>GPU Utilization:</strong> Percentage of GPU used during the benchmark</p>
+</li>
+<li>
+<p><strong>Memory Usage:</strong> Peak memory consumption</p>
+</li>
+</ul>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_interpreting_results"><a class="anchor" href="#_interpreting_results"></a>Interpreting Results</h3>
+<div class="paragraph">
+<p>Typical performance targets:
+* <strong>TTFT:</strong> &lt; 200ms for interactive applications
+* <strong>Inter-Token Latency:</strong> &lt; 50ms for smooth streaming
+* <strong>RPS:</strong> Varies by model size, but 10+ RPS is good for most use cases
+* <strong>Success Rate:</strong> &gt; 99% for production readiness</p>
+</div>
+<div class="admonitionblock note">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-note" title="Note"></i>
+</td>
+<td class="content">
+<div class="title">Performance vs. Accuracy Trade-off</div>
+<div class="paragraph">
+<p>Remember: Performance and accuracy are often trade-offs. A faster model may sacrifice some accuracy. Use both evaluations together to find the right balance for your use case.</p>
+</div>
+</td>
+</tr>
+</table>
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_advanced_custom_workload_testing"><a class="anchor" href="#_advanced_custom_workload_testing"></a>Advanced: Custom Workload Testing</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>You can test with custom prompts that match your actual workload:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash"># Upload custom prompts to S3
+oc run aws-cli-custom --rm -i --restart=Never \
+  --image=amazon/aws-cli:latest \
+  --env="AWS_ACCESS_KEY_ID=${S3_ACCESS_KEY}" \
+  --env="AWS_SECRET_ACCESS_KEY=${S3_SECRET_KEY}" \
+  --env="AWS_DEFAULT_REGION=us-east-1" \
+  -- sh -c "
+    # Create custom prompts file
+    echo 'prompt1,response1' &gt; /tmp/custom-prompts.csv
+    echo 'prompt2,response2' &gt;&gt; /tmp/custom-prompts.csv
+    # ... add your actual prompts
+
+    aws --endpoint-url=${S3_ENDPOINT} s3 cp /tmp/custom-prompts.csv \
+      s3://${S3_BUCKET}/custom-data/custom-prompts.csv
+  "
+
+# Run benchmark with custom data
+# Update the TaskRun to set:
+# - custom-data: "True"
+# - custom-filename: "custom-prompts.csv"</code></pre>
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_next_steps"><a class="anchor" href="#_next_steps"></a>Next Steps</h2>
+<div class="sectionbody">
+<div class="ulist">
+<ul>
+<li>
+<p>Proceed to <a href="domain-evaluation-lab.html" class="xref page">Domain-Specific Evaluation</a> to test business-relevant scenarios</p>
+</li>
+<li>
+<p>Or continue to <a href="results-collection.html" class="xref page">Results Collection &amp; Visualization</a> to analyze all your evaluation results together</p>
+</li>
+</ul>
+</div>
+<hr>
+<div class="paragraph">
+<p><strong>Performance measured. Now let&#8217;s test domain knowledge.</strong></p>
+</div>
+</div>
+</div>
+<nav class="pagination">
+  <span class="prev"><a href="multilang-evaluation-lab.html">Multi-Language Evaluation</a></span>
+  <span class="next"><a href="domain-evaluation-lab.html">Domain-Specific Evaluation</a></span>
+</nav>
+</article>
+  </div>
+</main>
+</div>
+<footer class="footer">
+  <img src="../../../_/img/rhl-logo-red.png" height="40px" alt="Red Hat"  href="https://redhat.com" >
+</footer><script id="site-script" src="../../../_/js/site.js" data-ui-root-path="../../../_"></script>
+<script async src="../../../_/js/vendor/highlight.js"></script>
+  </body>
+</html>

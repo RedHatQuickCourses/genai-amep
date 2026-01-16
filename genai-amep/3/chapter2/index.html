@@ -3,7 +3,9 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width,initial-scale=1">
-    <title>Chapter 2[Work-IN-Progress] :: Automated Multi Language LLM Evaluation Pipeline</title>
+    <title>Comprehensive Model Evaluation Lab :: Automated Multi Language LLM Evaluation Pipeline</title>
+    <link rel="prev" href="../chapter1/results-analysis.html">
+    <link rel="next" href="multilang-evaluation-lab.html">
     <meta name="generator" content="Antora 3.1.3">
     <link rel="stylesheet" href="../../../_/css/site.css">
     <script>var uiRootPath = '../../../_'</script>
@@ -54,10 +56,35 @@
     <a class="nav-link" href="../chapter1/modelcar-pipeline.html">ModelCar Pipeline Deployment</a>
   </li>
   <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../chapter1/benchmark-pipeline.html">Benchmark Pipeline Deployment</a>
+  </li>
+  <li class="nav-item" data-depth="2">
     <a class="nav-link" href="../chapter1/evaluation-pipeline.html">Evaluation Pipeline Deployment</a>
   </li>
   <li class="nav-item" data-depth="2">
     <a class="nav-link" href="../chapter1/results-analysis.html">Results Analysis and Visualization</a>
+  </li>
+</ul>
+  </li>
+</ul>
+  </li>
+  <li class="nav-item" data-depth="0">
+<ul class="nav-list">
+  <li class="nav-item is-current-page" data-depth="1">
+    <button class="nav-item-toggle"></button>
+    <a class="nav-link" href="index.html">Model Evaluation Lab</a>
+<ul class="nav-list">
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="multilang-evaluation-lab.html">Multi-Language Evaluation</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="performance-evaluation-lab.html">Performance Benchmarking</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="domain-evaluation-lab.html">Domain-Specific Evaluation</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="results-collection.html">Results Collection &amp; Visualization</a>
   </li>
 </ul>
   </li>
@@ -92,7 +119,7 @@
 <nav class="breadcrumbs" aria-label="breadcrumbs">
   <ul>
     <li><a href="../index.html">Automated Multi-Language LLM Evaluation Pipeline</a></li>
-    <li><a href="index.html">Chapter 2[Work-IN-Progress]</a></li>
+    <li><a href="index.html">Model Evaluation Lab</a></li>
   </ul>
 </nav>
 </div>
@@ -101,10 +128,245 @@
   <div class="toc-menu"></div>
 </aside>
 <article class="doc">
-<h1 class="page">Chapter 2[Work-IN-Progress]</h1>
-<div class="paragraph">
-<p>This is the home page of <em>Chapter 2</em> in the <strong>hello</strong> quick course&#8230;&#8203;.</p>
+<h1 class="page">Comprehensive Model Evaluation Lab</h1>
+<div id="preamble">
+<div class="sectionbody">
+<div class="paragraph lead">
+<p><strong>Evaluation is where theory meets reality.</strong></p>
 </div>
+<div class="paragraph">
+<p>You&#8217;ve deployed your model. You&#8217;ve registered it in the Model Registry. Now comes the critical question: <strong>"How good is it, really?"</strong></p>
+</div>
+<div class="paragraph">
+<p>This lab teaches you to answer that question systematically by evaluating your model across three critical dimensions:</p>
+</div>
+<div class="olist arabic">
+<ol class="arabic">
+<li>
+<p><strong>Accuracy:</strong> Does the model produce correct answers? (Multi-language evaluation)</p>
+</li>
+<li>
+<p><strong>Performance:</strong> Can it serve requests fast enough for production? (Performance benchmarking)</p>
+</li>
+<li>
+<p><strong>Domain Knowledge:</strong> Does it understand your specific business context? (Domain-specific evaluation)</p>
+</li>
+</ol>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_the_evaluation_challenge"><a class="anchor" href="#_the_evaluation_challenge"></a>The Evaluation Challenge</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>In production AI systems, a model that is fast but inaccurate is just as problematic as a model that is accurate but too slow. True model evaluation requires a <strong>holistic approach</strong> that measures:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p><strong>Task-level accuracy</strong> across multiple languages</p>
+</li>
+<li>
+<p><strong>System performance</strong> (latency, throughput, resource utilization)</p>
+</li>
+<li>
+<p><strong>Domain-specific knowledge</strong> relevant to your business use case</p>
+</li>
+</ul>
+</div>
+<div class="paragraph">
+<p>This lab provides a command-line workflow to run comprehensive evaluations and store results in S3 for cross-model comparison and visualization.</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_prerequisites"><a class="anchor" href="#_prerequisites"></a>Prerequisites</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>Before starting this lab, ensure you have:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p>Completed the <strong>rhoai3-deploy</strong> course (model is deployed as an InferenceService)</p>
+</li>
+<li>
+<p>Completed the <strong>rhoai3-registry</strong> course (model is registered in the Model Registry)</p>
+</li>
+<li>
+<p>Access to an OpenShift AI 3.0+ cluster</p>
+</li>
+<li>
+<p>The <code>oc</code> CLI tool installed and configured</p>
+</li>
+<li>
+<p>Access to S3-compatible storage (MinIO or ODF) for results storage</p>
+</li>
+<li>
+<p>A deployed InferenceService that is in "Ready" state</p>
+</li>
+</ul>
+</div>
+<div class="admonitionblock important">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-important" title="Important"></i>
+</td>
+<td class="content">
+<div class="title">Verify Your Model is Ready</div>
+<div class="paragraph">
+<p>Before proceeding, verify your InferenceService is running:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash"># Check your InferenceService status
+oc get inferenceservice -n &lt;your-namespace&gt;
+
+# Verify the service is ready
+oc get inferenceservice &lt;your-model-name&gt; -n &lt;your-namespace&gt; \
+  -o jsonpath='{.status.conditions[?(@.type=="Ready")].status}'</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>The output should be <code>True</code>. If not, troubleshoot your deployment before continuing.</p>
+</div>
+</td>
+</tr>
+</table>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_lab_structure"><a class="anchor" href="#_lab_structure"></a>Lab Structure</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>This lab is organized into four sequential modules:</p>
+</div>
+<div class="sect2">
+<h3 id="_module_1_multi_language_evaluation"><a class="anchor" href="#_module_1_multi_language_evaluation"></a>Module 1: Multi-Language Evaluation</h3>
+<div class="paragraph">
+<p>Evaluate your model&#8217;s accuracy across English, Spanish, and Japanese using standardized benchmarks. This module uses <strong>TrustyAI LMEvalJob</strong> to run accuracy tests and measure task-level performance.</p>
+</div>
+<div class="paragraph">
+<p><strong>What you&#8217;ll learn:</strong>
+* How to configure and run TrustyAI evaluation jobs
+* How to interpret accuracy metrics across languages
+* How to identify language-specific performance gaps</p>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_module_2_performance_benchmarking"><a class="anchor" href="#_module_2_performance_benchmarking"></a>Module 2: Performance Benchmarking</h3>
+<div class="paragraph">
+<p>Measure your model&#8217;s system performance using <strong>GuideLLM</strong>. This module tests latency, throughput, and resource utilization under realistic load conditions.</p>
+</div>
+<div class="paragraph">
+<p><strong>What you&#8217;ll learn:</strong>
+* How to run GuideLLM performance benchmarks
+* How to interpret latency and throughput metrics
+* How to identify performance bottlenecks</p>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_module_3_domain_specific_evaluation"><a class="anchor" href="#_module_3_domain_specific_evaluation"></a>Module 3: Domain-Specific Evaluation</h3>
+<div class="paragraph">
+<p>Run custom evaluations tailored to your business domain. This module shows you how to create and execute domain-specific evaluation tasks.</p>
+</div>
+<div class="paragraph">
+<p><strong>What you&#8217;ll learn:</strong>
+* How to create custom evaluation datasets
+* How to configure domain-specific evaluation jobs
+* How to measure model performance on business-relevant tasks</p>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_module_4_results_collection_visualization"><a class="anchor" href="#_module_4_results_collection_visualization"></a>Module 4: Results Collection &amp; Visualization</h3>
+<div class="paragraph">
+<p>Collect evaluation results from S3 and create visualizations to compare models. This module uses Jupyter notebooks to analyze and visualize evaluation data.</p>
+</div>
+<div class="paragraph">
+<p><strong>What you&#8217;ll learn:</strong>
+* How to retrieve evaluation results from S3
+* How to create comparison visualizations
+* How to generate evaluation reports for stakeholders</p>
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_expected_outcomes"><a class="anchor" href="#_expected_outcomes"></a>Expected Outcomes</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>By the end of this lab, you will have:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p>Run comprehensive evaluations across accuracy, performance, and domain knowledge</p>
+</li>
+<li>
+<p>Stored all evaluation results in S3 for future reference</p>
+</li>
+<li>
+<p>Created visualizations comparing your model&#8217;s performance</p>
+</li>
+<li>
+<p>Generated evaluation reports suitable for stakeholder review</p>
+</li>
+</ul>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_lab_environment"><a class="anchor" href="#_lab_environment"></a>Lab Environment</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>This lab assumes you are working in an OpenShift AI environment with:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p>A deployed model (from rhoai3-deploy course)</p>
+</li>
+<li>
+<p>Model Registry configured (from rhoai3-registry course)</p>
+</li>
+<li>
+<p>S3 storage available for results</p>
+</li>
+<li>
+<p>TrustyAI operator installed and configured</p>
+</li>
+<li>
+<p>Access to create Tekton TaskRuns for GuideLLM benchmarks</p>
+</li>
+</ul>
+</div>
+<div class="admonitionblock note">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-note" title="Note"></i>
+</td>
+<td class="content">
+<div class="title">All Command-Line Focus</div>
+<div class="paragraph">
+<p>This lab is designed to be completed entirely from the command line, with the exception of Module 4 (Results Visualization), which uses Jupyter notebooks for data analysis and visualization.</p>
+</div>
+</td>
+</tr>
+</table>
+</div>
+<hr>
+<div class="paragraph">
+<p><strong>Ready to evaluate? Let&#8217;s start with multi-language accuracy testing.</strong></p>
+</div>
+</div>
+</div>
+<nav class="pagination">
+  <span class="prev"><a href="../chapter1/results-analysis.html">Results Analysis and Visualization</a></span>
+  <span class="next"><a href="multilang-evaluation-lab.html">Multi-Language Evaluation</a></span>
+</nav>
 </article>
   </div>
 </main>
