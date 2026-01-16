@@ -1,0 +1,437 @@
+= Lab: Multi-Language Accuracy Evaluation
+:navtitle: Multi-Language Evaluation
+:toc: macro
+
+// Antora metadata
+:page-role: MLOps Engineer
+:description: Evaluate model accuracy across English, Spanish, and Japanese using TrustyAI LMEvalJob.
+
+[.lead]
+*Accuracy is not universal. A model that excels in English may struggle in Spanish or Japanese.*
+
+In this lab, you will evaluate your deployed model's accuracy across multiple languages using standardized benchmarks. This evaluation answers the critical question: **"How well does my model perform across different languages?"**
+
+== Why Multi-Language Evaluation Matters
+
+Enterprise AI systems must serve global audiences. A model that performs well in English but fails in Spanish or Japanese creates:
+
+* **User Experience Gaps:** Inconsistent quality across languages damages user trust
+* **Business Risk:** Poor performance in key markets can impact revenue
+* **Deployment Blind Spots:** Without multi-language testing, you may deploy models that fail in production
+
+This lab uses **TrustyAI LMEvalJob** to run standardized accuracy benchmarks across three languages:
+
+* **English (en):** ARC-Easy, HellaSwag, WinoGrande, TruthfulQA
+* **Spanish (es):** BELEBELE Spanish, XNLI Spanish
+* **Japanese (ja):** BELEBELE Japanese, XNLI Japanese
+
+== Prerequisites
+
+Before starting, ensure:
+
+* Your InferenceService is deployed and in "Ready" state
+* TrustyAI operator is installed and configured (from llmops-lmeval course)
+* You know your model's inference endpoint URL
+* You have access to create LMEvalJob resources in your namespace
+
+[IMPORTANT]
+.Verify TrustyAI Configuration
+====
+Ensure TrustyAI is configured for remote dataset access:
+
+[source,bash]
+----
+# Check TrustyAI ConfigMap
+oc get configmap trustyai-service-operator-config -n redhat-ods-applications -o yaml | grep -A 5 "lmes-allow"
+
+# If not configured, enable online access:
+oc patch configmap trustyai-service-operator-config -n redhat-ods-applications \
+  --type merge -p '{"data":{"lmes-allow-online":"true","lmes-allow-code-execution":"true"}}'
+
+# Restart the operator
+oc rollout restart deployment trustyai-service-operator-controller-manager -n redhat-ods-applications
+----
+====
+
+== Step 1: Identify Your Model Endpoint
+
+First, we need to determine your model's inference endpoint URL.
+
+[source,bash]
+----
+# Set your namespace (adjust as needed)
+export NAMESPACE="vllm"  # or your model namespace
+export MODEL_NAME="granite-4.0-micro"  # your model name
+
+# Get the inference endpoint
+oc get inferenceservice $MODEL_NAME -n $NAMESPACE \
+  -o jsonpath='{.status.url}'
+
+# Save it for later use
+export INFERENCE_URL=$(oc get inferenceservice $MODEL_NAME -n $NAMESPACE \
+  -o jsonpath='{.status.url}')
+echo "Inference URL: $INFERENCE_URL"
+----
+
+[NOTE]
+.Endpoint Format
+====
+The endpoint URL should look like:
+`https://<model-name>-predictor-<namespace>.<cluster-domain>/v1`
+
+For completions endpoint, append `/completions` or `/chat/completions` depending on your model type.
+====
+
+== Step 2: Create Evaluation Job Definitions
+
+We'll create LMEvalJob resources for each language. Start by creating a directory for your evaluation configurations:
+
+[source,bash]
+----
+# Create evaluation directory
+mkdir -p ~/model-evaluations/multilang
+cd ~/model-evaluations/multilang
+----
+
+=== 2.1 English Evaluation Job
+
+Create the English evaluation job:
+
+[source,bash]
+----
+cat > english-eval.yaml <<EOF
+apiVersion: trustyai.opendatahub.io/v1alpha1
+kind: LMEvalJob
+metadata:
+  name: multilang-english-eval
+  namespace: ${NAMESPACE}
+spec:
+  model: local-completions
+  taskList:
+    taskNames:
+      - arc_easy
+      - hellaswag
+      - winogrande
+      - truthfulqa_mc2
+  modelArgs:
+    - name: model
+      value: ${MODEL_NAME}
+    - name: base_url
+      value: ${INFERENCE_URL}/v1/completions
+    - name: num_concurrent
+      value: '1'
+    - name: max_retries
+      value: '6'
+    - name: tokenized_requests
+      value: 'False'
+    - name: tokenizer
+      value: ibm-granite/granite-4.0-micro
+  logSamples: true
+  batchSize: '1'
+  allowOnline: true
+  allowCodeExecution: false
+  outputs:
+    pvcManaged:
+      size: 5Gi
+EOF
+----
+
+=== 2.2 Spanish Evaluation Job
+
+Create the Spanish evaluation job:
+
+[source,bash]
+----
+cat > spanish-eval.yaml <<EOF
+apiVersion: trustyai.opendatahub.io/v1alpha1
+kind: LMEvalJob
+metadata:
+  name: multilang-spanish-eval
+  namespace: ${NAMESPACE}
+spec:
+  model: local-completions
+  taskList:
+    taskNames:
+      - belebele_spa_Latn
+      - xnli_es
+  modelArgs:
+    - name: model
+      value: ${MODEL_NAME}
+    - name: base_url
+      value: ${INFERENCE_URL}/v1/completions
+    - name: num_concurrent
+      value: '1'
+    - name: max_retries
+      value: '6'
+    - name: tokenized_requests
+      value: 'False'
+    - name: tokenizer
+      value: ibm-granite/granite-4.0-micro
+  logSamples: true
+  batchSize: '1'
+  allowOnline: true
+  allowCodeExecution: false
+  outputs:
+    pvcManaged:
+      size: 5Gi
+EOF
+----
+
+=== 2.3 Japanese Evaluation Job
+
+Create the Japanese evaluation job:
+
+[source,bash]
+----
+cat > japanese-eval.yaml <<EOF
+apiVersion: trustyai.opendatahub.io/v1alpha1
+kind: LMEvalJob
+metadata:
+  name: multilang-japanese-eval
+  namespace: ${NAMESPACE}
+spec:
+  model: local-completions
+  taskList:
+    taskNames:
+      - belebele_jpn_Jpan
+      - xnli_ja
+  modelArgs:
+    - name: model
+      value: ${MODEL_NAME}
+    - name: base_url
+      value: ${INFERENCE_URL}/v1/completions
+    - name: num_concurrent
+      value: '1'
+    - name: max_retries
+      value: '6'
+    - name: tokenized_requests
+      value: 'False'
+    - name: tokenizer
+      value: ibm-granite/granite-4.0-micro
+  logSamples: true
+  batchSize: '1'
+  allowOnline: true
+  allowCodeExecution: false
+  outputs:
+    pvcManaged:
+      size: 5Gi
+EOF
+----
+
+[NOTE]
+.Tokenizer Configuration
+====
+Update the `tokenizer` value in each job to match your model. For IBM Granite models, use the Hugging Face model path (e.g., `ibm-granite/granite-4.0-micro`).
+====
+
+== Step 3: Run the Evaluations
+
+Now we'll run each evaluation job sequentially. Each job will take 10-30 minutes depending on your model size and hardware.
+
+=== 3.1 Run English Evaluation
+
+[source,bash]
+----
+# Apply the English evaluation job
+oc apply -f english-eval.yaml
+
+# Watch the job progress
+oc get lmevaljob multilang-english-eval -n ${NAMESPACE} -w
+----
+
+Monitor the pod logs to see progress:
+
+[source,bash]
+----
+# Get the pod name
+POD_NAME=$(oc get pods -n ${NAMESPACE} -l job-name=multilang-english-eval -o jsonpath='{.items[0].metadata.name}')
+
+# Watch logs
+oc logs -f $POD_NAME -n ${NAMESPACE}
+----
+
+Wait for the job to complete (status will show "Succeeded").
+
+=== 3.2 Run Spanish Evaluation
+
+[source,bash]
+----
+# Apply the Spanish evaluation job
+oc apply -f spanish-eval.yaml
+
+# Watch progress
+oc get lmevaljob multilang-spanish-eval -n ${NAMESPACE} -w
+----
+
+=== 3.3 Run Japanese Evaluation
+
+[source,bash]
+----
+# Apply the Japanese evaluation job
+oc apply -f japanese-eval.yaml
+
+# Watch progress
+oc get lmevaljob multilang-japanese-eval -n ${NAMESPACE} -w
+----
+
+[NOTE]
+.Running Evaluations in Parallel
+====
+You can run all three evaluations in parallel if you have sufficient GPU resources. However, running them sequentially is safer and easier to monitor.
+====
+
+== Step 4: Extract Results
+
+Once all evaluations complete, extract the results from the PVCs:
+
+[source,bash]
+----
+# Create results directory
+mkdir -p ~/evaluation-results/multilang
+cd ~/evaluation-results/multilang
+
+# Function to extract results from a job
+extract_results() {
+  local JOB_NAME=$1
+  local LANG=$2
+  
+  # Get the PVC name
+  PVC_NAME=$(oc get lmevaljob $JOB_NAME -n ${NAMESPACE} \
+    -o jsonpath='{.status.outputs.pvcManaged.name}')
+  
+  if [ -z "$PVC_NAME" ]; then
+    echo "⚠️  No PVC found for $JOB_NAME"
+    return
+  fi
+  
+  # Create a pod to access the PVC
+  cat > extract-pod.yaml <<EOF
+apiVersion: v1
+kind: Pod
+metadata:
+  name: extract-${LANG}-results
+  namespace: ${NAMESPACE}
+spec:
+  containers:
+  - name: extractor
+    image: registry.access.redhat.com/ubi8/ubi-minimal:latest
+    command: ["/bin/sh", "-c", "sleep 3600"]
+    volumeMounts:
+    - name: results
+      mountPath: /results
+  volumes:
+  - name: results
+    persistentVolumeClaim:
+      claimName: ${PVC_NAME}
+  restartPolicy: Never
+EOF
+  
+  oc apply -f extract-pod.yaml
+  
+  # Wait for pod to be ready
+  oc wait --for=condition=Ready pod/extract-${LANG}-results -n ${NAMESPACE} --timeout=60s
+  
+  # Copy results
+  oc cp ${NAMESPACE}/extract-${LANG}-results:/results ./${LANG}-results
+  
+  # Cleanup
+  oc delete pod extract-${LANG}-results -n ${NAMESPACE}
+  rm extract-pod.yaml
+  
+  echo "✅ Extracted ${LANG} results to ./${LANG}-results/"
+}
+
+# Extract results for each language
+extract_results multilang-english-eval en
+extract_results multilang-spanish-eval es
+extract_results multilang-japanese-eval ja
+----
+
+== Step 5: Upload Results to S3
+
+Now we'll upload the results to S3 for later analysis and comparison:
+
+[source,bash]
+----
+# Set S3 configuration (adjust to your environment)
+export S3_ENDPOINT="http://minio-service.s3-storage.svc.cluster.local:9000"
+export S3_BUCKET="model-evaluations"
+export S3_ACCESS_KEY="minio"  # Update with your credentials
+export S3_SECRET_KEY="minio123"  # Update with your credentials
+
+# Install AWS CLI if needed
+# For OpenShift, use a pod with AWS CLI
+oc run aws-cli --rm -i --restart=Never \
+  --image=amazon/aws-cli:latest \
+  --env="AWS_ACCESS_KEY_ID=${S3_ACCESS_KEY}" \
+  --env="AWS_SECRET_ACCESS_KEY=${S3_SECRET_KEY}" \
+  --env="AWS_DEFAULT_REGION=us-east-1" \
+  -- sh -c "
+    aws --endpoint-url=${S3_ENDPOINT} s3 mb s3://${S3_BUCKET} || true
+    
+    # Create timestamped directory
+    TIMESTAMP=\$(date +%Y%m%d_%H%M%S)
+    MODEL_ID=\"${MODEL_NAME}_v1.0\"
+    
+    # Upload results
+    for lang in en es ja; do
+      if [ -d ~/evaluation-results/multilang/\${lang}-results ]; then
+        aws --endpoint-url=${S3_ENDPOINT} s3 sync \
+          ~/evaluation-results/multilang/\${lang}-results \
+          s3://${S3_BUCKET}/multilang/\${MODEL_ID}/\${TIMESTAMP}/\${lang}/
+        echo \"✅ Uploaded \${lang} results\"
+      fi
+    done
+    
+    echo \"📊 Results uploaded to: s3://${S3_BUCKET}/multilang/\${MODEL_ID}/\${TIMESTAMP}/\"
+  "
+----
+
+[NOTE]
+.Using Data Connections
+====
+If you're using OpenShift AI Data Connections, you can mount the S3 connection directly to a pod instead of using AWS CLI credentials.
+====
+
+== Step 6: Verify Results
+
+Check that your results were uploaded successfully:
+
+[source,bash]
+----
+# List uploaded files
+oc run aws-cli-verify --rm -i --restart=Never \
+  --image=amazon/aws-cli:latest \
+  --env="AWS_ACCESS_KEY_ID=${S3_ACCESS_KEY}" \
+  --env="AWS_SECRET_ACCESS_KEY=${S3_SECRET_KEY}" \
+  --env="AWS_DEFAULT_REGION=us-east-1" \
+  -- sh -c "
+    aws --endpoint-url=${S3_ENDPOINT} s3 ls \
+      s3://${S3_BUCKET}/multilang/ --recursive
+  "
+----
+
+== Understanding the Results
+
+Each language evaluation produces accuracy metrics for the benchmarks:
+
+* **ARC-Easy:** Grade-school science questions (accuracy)
+* **HellaSwag:** Commonsense reasoning (normalized accuracy)
+* **WinoGrande:** Pronoun resolution (accuracy)
+* **TruthfulQA:** Truthfulness detection (multiple-choice accuracy)
+* **BELEBELE:** Reading comprehension (accuracy)
+* **XNLI:** Cross-lingual natural language inference (accuracy)
+
+Typical performance ranges:
+* **English:** 0.60-0.80 accuracy (depending on model size)
+* **Spanish:** 0.55-0.70 accuracy (5-10% lower than English)
+* **Japanese:** 0.50-0.65 accuracy (10-15% lower than English)
+
+== Next Steps
+
+* Proceed to xref:performance-evaluation-lab.adoc[Performance Benchmarking] to measure system performance
+* Or continue to xref:domain-evaluation-lab.adoc[Domain-Specific Evaluation] for business-focused testing
+* View xref:results-collection.adoc[Results Collection & Visualization] to analyze and compare your results
+
+---
+*Accuracy evaluated. Now let's measure performance.*

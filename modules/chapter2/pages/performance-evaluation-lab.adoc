@@ -1,0 +1,335 @@
+= Lab: Performance Benchmarking with GuideLLM
+:navtitle: Performance Benchmarking
+:toc: macro
+
+// Antora metadata
+:page-role: MLOps Engineer
+:description: Measure model performance (latency, throughput) using GuideLLM benchmarks.
+
+[.lead]
+*Performance is where cost meets user experience.*
+
+A model that is accurate but too slow will fail in production. In this lab, you will measure your model's system performance using **GuideLLM**—the industry-standard tool for LLM performance benchmarking.
+
+== Why Performance Evaluation Matters
+
+System performance directly impacts:
+
+* **User Experience:** Latency determines response time. Users expect sub-second responses in interactive applications.
+* **Cost Efficiency:** Throughput determines how many requests you can serve per GPU. Higher throughput = lower cost per request.
+* **Scalability:** Resource utilization determines how many concurrent users you can support.
+* **Deployment Readiness:** Performance metrics inform architectural decisions (batching, caching, distributed serving).
+
+This lab uses **GuideLLM** to measure:
+
+* **Latency:** Time to first token (TTFT) and inter-token latency
+* **Throughput:** Requests per second (RPS) and tokens per second (TPS)
+* **Resource Utilization:** GPU and memory usage under load
+
+== Prerequisites
+
+Before starting, ensure:
+
+* Your InferenceService is deployed and in "Ready" state
+* You know your model's inference endpoint URL
+* Tekton is installed in your cluster
+* You have access to create Tekton TaskRuns
+* S3 storage is available for results
+
+== Step 1: Deploy GuideLLM Benchmark Task
+
+First, we'll deploy the GuideLLM benchmark task to your cluster:
+
+[source,bash]
+----
+# Set your namespace
+export NAMESPACE="vllm"  # or your model namespace
+
+# Clone the GuideLLM pipeline repository (if not already available)
+cd ~
+git clone https://github.com/RedHatQuickCourses/guidellm-pipeline.git || echo "Repository may already exist"
+cd guidellm-pipeline
+
+# Apply the GuideLLM benchmark task
+oc apply -f pipeline/guidellm-benchmark-task.yaml -n ${NAMESPACE}
+
+# Verify the task is created
+oc get task guidellm-benchmark -n ${NAMESPACE}
+----
+
+== Step 2: Create Storage for Results
+
+Create a PersistentVolumeClaim to store benchmark results:
+
+[source,bash]
+----
+# Create PVC for benchmark results
+cat > guidellm-pvc.yaml <<EOF
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: guidellm-output-pvc
+  namespace: ${NAMESPACE}
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 10Gi
+EOF
+
+oc apply -f guidellm-pvc.yaml
+----
+
+== Step 3: Identify Your Model Endpoint
+
+Get your model's inference endpoint:
+
+[source,bash]
+----
+# Set your model name
+export MODEL_NAME="granite-4.0-micro"  # your model name
+
+# Get the inference endpoint
+export INFERENCE_URL=$(oc get inferenceservice $MODEL_NAME -n ${NAMESPACE} \
+  -o jsonpath='{.status.url}')
+echo "Inference URL: $INFERENCE_URL"
+
+# For GuideLLM, we need the /v1 endpoint
+export TARGET_ENDPOINT="${INFERENCE_URL}/v1"
+echo "Target endpoint: $TARGET_ENDPOINT"
+----
+
+== Step 4: Run Performance Benchmark
+
+Now we'll run the GuideLLM benchmark. We'll use a **sweep** test that automatically tests multiple request rates:
+
+[source,bash]
+----
+# Set benchmark parameters
+export PROCESSOR="ibm-granite/granite-4.0-micro"  # Hugging Face model path for tokenizer
+export DATA_CONFIG="prompt_tokens=512,output_tokens=128"  # Workload profile
+export MAX_SECONDS="60"  # Maximum test duration
+export RATE_TYPE="sweep"  # Test multiple rates automatically
+export RATE="1.0,2.0,4.0,8.0"  # Request rates to test (requests per second)
+export MAX_CONCURRENCY="10"  # Maximum concurrent requests
+
+# Create TaskRun
+cat > guidellm-benchmark-run.yaml <<EOF
+apiVersion: tekton.dev/v1
+kind: TaskRun
+metadata:
+  generateName: guidellm-benchmark-
+  namespace: ${NAMESPACE}
+spec:
+  taskRef:
+    name: guidellm-benchmark
+  params:
+    - name: target
+      value: ${TARGET_ENDPOINT}
+    - name: model-name
+      value: ${MODEL_NAME}
+    - name: processor
+      value: ${PROCESSOR}
+    - name: data-config
+      value: ${DATA_CONFIG}
+    - name: max-seconds
+      value: ${MAX_SECONDS}
+    - name: rate-type
+      value: ${RATE_TYPE}
+    - name: rate
+      value: ${RATE}
+    - name: max-concurrency
+      value: ${MAX_CONCURRENCY}
+    - name: api-key
+      value: ""
+    - name: huggingface-token
+      value: ""
+    - name: output-filename
+      value: ${MODEL_NAME}-performance-results.yaml
+    - name: s3-api-endpoint
+      value: http://minio-service.s3-storage.svc.cluster.local:9000
+    - name: s3-access-key-id
+      value: minio
+    - name: s3-secret-access-key
+      value: minio123
+    - name: custom-data
+      value: "False"
+  workspaces:
+    - name: shared-workspace
+      persistentVolumeClaim:
+        claimName: guidellm-output-pvc
+  timeout: 30m
+EOF
+
+# Apply and run the TaskRun
+oc create -f guidellm-benchmark-run.yaml
+----
+
+[NOTE]
+.Benchmark Parameters Explained
+====
+* **data-config:** Defines the workload profile. `prompt_tokens=512,output_tokens=128` means each request has a 512-token prompt and generates 128 tokens.
+* **rate-type:** `sweep` tests multiple rates automatically, `fixed` tests a single rate.
+* **rate:** Request rates to test (requests per second). Higher rates test system limits.
+* **max-concurrency:** Maximum number of concurrent requests. This simulates real-world load.
+====
+
+== Step 5: Monitor Benchmark Progress
+
+Watch the TaskRun progress:
+
+[source,bash]
+----
+# Get the TaskRun name
+TASKRUN_NAME=$(oc get taskrun -n ${NAMESPACE} -l tekton.dev/task=guidellm-benchmark \
+  --sort-by=.metadata.creationTimestamp -o jsonpath='{.items[-1].metadata.name}')
+
+echo "Monitoring TaskRun: $TASKRUN_NAME"
+
+# Watch TaskRun status
+oc get taskrun $TASKRUN_NAME -n ${NAMESPACE} -w
+----
+
+Monitor the pod logs to see benchmark progress:
+
+[source,bash]
+----
+# Get the pod name
+POD_NAME=$(oc get pods -n ${NAMESPACE} -l tekton.dev/taskRun=$TASKRUN_NAME \
+  -o jsonpath='{.items[0].metadata.name}')
+
+# Watch logs
+oc logs -f $POD_NAME -n ${NAMESPACE}
+----
+
+The benchmark will take 5-15 minutes depending on your configuration. You'll see progress updates showing:
+* Current request rate being tested
+* Latency percentiles (p50, p95, p99)
+* Throughput metrics
+* Success/failure rates
+
+== Step 6: Extract Results
+
+Once the benchmark completes, extract the results:
+
+[source,bash]
+----
+# Create results directory
+mkdir -p ~/evaluation-results/performance
+cd ~/evaluation-results/performance
+
+# Get the pod that has the results
+POD_NAME=$(oc get pods -n ${NAMESPACE} -l tekton.dev/taskRun=$TASKRUN_NAME \
+  -o jsonpath='{.items[0].metadata.name}')
+
+# Copy results from the workspace
+oc cp ${NAMESPACE}/$POD_NAME:/workspace/shared-workspace/${MODEL_NAME}-performance-results.yaml \
+  ./${MODEL_NAME}-performance-results.yaml
+
+echo "✅ Results extracted to: ./${MODEL_NAME}-performance-results.yaml"
+----
+
+== Step 7: Upload Results to S3
+
+Upload the results to S3 for later analysis:
+
+[source,bash]
+----
+# Set S3 configuration
+export S3_ENDPOINT="http://minio-service.s3-storage.svc.cluster.local:9000"
+export S3_BUCKET="model-evaluations"
+export S3_ACCESS_KEY="minio"
+export S3_SECRET_KEY="minio123"
+
+# Upload results
+oc run aws-cli-upload --rm -i --restart=Never \
+  --image=amazon/aws-cli:latest \
+  --env="AWS_ACCESS_KEY_ID=${S3_ACCESS_KEY}" \
+  --env="AWS_SECRET_ACCESS_KEY=${S3_SECRET_KEY}" \
+  --env="AWS_DEFAULT_REGION=us-east-1" \
+  -- sh -c "
+    aws --endpoint-url=${S3_ENDPOINT} s3 mb s3://${S3_BUCKET} || true
+    
+    TIMESTAMP=\$(date +%Y%m%d_%H%M%S)
+    MODEL_ID=\"${MODEL_NAME}_v1.0\"
+    
+    aws --endpoint-url=${S3_ENDPOINT} s3 cp \
+      ~/evaluation-results/performance/${MODEL_NAME}-performance-results.yaml \
+      s3://${S3_BUCKET}/performance/\${MODEL_ID}/\${TIMESTAMP}/performance-results.yaml
+    
+    echo \"✅ Results uploaded to: s3://${S3_BUCKET}/performance/\${MODEL_ID}/\${TIMESTAMP}/\"
+  "
+----
+
+== Understanding the Results
+
+The GuideLLM results include:
+
+=== Latency Metrics
+
+* **Time to First Token (TTFT):** How long until the first token is generated
+* **Inter-Token Latency:** Average time between tokens
+* **End-to-End Latency:** Total time for a complete request
+* **Percentiles:** p50, p95, p99 latency values
+
+=== Throughput Metrics
+
+* **Requests Per Second (RPS):** How many requests the system can handle
+* **Tokens Per Second (TPS):** Token generation rate
+* **Successful Requests:** Percentage of requests that completed successfully
+
+=== Resource Metrics
+
+* **GPU Utilization:** Percentage of GPU used during the benchmark
+* **Memory Usage:** Peak memory consumption
+
+=== Interpreting Results
+
+Typical performance targets:
+* **TTFT:** < 200ms for interactive applications
+* **Inter-Token Latency:** < 50ms for smooth streaming
+* **RPS:** Varies by model size, but 10+ RPS is good for most use cases
+* **Success Rate:** > 99% for production readiness
+
+[NOTE]
+.Performance vs. Accuracy Trade-off
+====
+Remember: Performance and accuracy are often trade-offs. A faster model may sacrifice some accuracy. Use both evaluations together to find the right balance for your use case.
+====
+
+== Advanced: Custom Workload Testing
+
+You can test with custom prompts that match your actual workload:
+
+[source,bash]
+----
+# Upload custom prompts to S3
+oc run aws-cli-custom --rm -i --restart=Never \
+  --image=amazon/aws-cli:latest \
+  --env="AWS_ACCESS_KEY_ID=${S3_ACCESS_KEY}" \
+  --env="AWS_SECRET_ACCESS_KEY=${S3_SECRET_KEY}" \
+  --env="AWS_DEFAULT_REGION=us-east-1" \
+  -- sh -c "
+    # Create custom prompts file
+    echo 'prompt1,response1' > /tmp/custom-prompts.csv
+    echo 'prompt2,response2' >> /tmp/custom-prompts.csv
+    # ... add your actual prompts
+    
+    aws --endpoint-url=${S3_ENDPOINT} s3 cp /tmp/custom-prompts.csv \
+      s3://${S3_BUCKET}/custom-data/custom-prompts.csv
+  "
+
+# Run benchmark with custom data
+# Update the TaskRun to set:
+# - custom-data: "True"
+# - custom-filename: "custom-prompts.csv"
+----
+
+== Next Steps
+
+* Proceed to xref:domain-evaluation-lab.adoc[Domain-Specific Evaluation] to test business-relevant scenarios
+* Or continue to xref:results-collection.adoc[Results Collection & Visualization] to analyze all your evaluation results together
+
+---
+*Performance measured. Now let's test domain knowledge.*

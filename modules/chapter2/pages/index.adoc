@@ -1,0 +1,125 @@
+= Comprehensive Model Evaluation Lab
+:navtitle: Model Evaluation Lab
+:toc: macro
+
+// Antora metadata
+:page-role: MLOps Engineer
+:description: Hands-on lab for evaluating deployed models across multiple dimensions: accuracy, performance, and domain-specific capabilities.
+
+[.lead]
+*Evaluation is where theory meets reality.*
+
+You've deployed your model. You've registered it in the Model Registry. Now comes the critical question: **"How good is it, really?"**
+
+This lab teaches you to answer that question systematically by evaluating your model across three critical dimensions:
+
+. **Accuracy:** Does the model produce correct answers? (Multi-language evaluation)
+. **Performance:** Can it serve requests fast enough for production? (Performance benchmarking)
+. **Domain Knowledge:** Does it understand your specific business context? (Domain-specific evaluation)
+
+== The Evaluation Challenge
+
+In production AI systems, a model that is fast but inaccurate is just as problematic as a model that is accurate but too slow. True model evaluation requires a **holistic approach** that measures:
+
+* **Task-level accuracy** across multiple languages
+* **System performance** (latency, throughput, resource utilization)
+* **Domain-specific knowledge** relevant to your business use case
+
+This lab provides a command-line workflow to run comprehensive evaluations and store results in S3 for cross-model comparison and visualization.
+
+== Prerequisites
+
+Before starting this lab, ensure you have:
+
+* Completed the **rhoai3-deploy** course (model is deployed as an InferenceService)
+* Completed the **rhoai3-registry** course (model is registered in the Model Registry)
+* Access to an OpenShift AI 3.0+ cluster
+* The `oc` CLI tool installed and configured
+* Access to S3-compatible storage (MinIO or ODF) for results storage
+* A deployed InferenceService that is in "Ready" state
+
+[IMPORTANT]
+.Verify Your Model is Ready
+====
+Before proceeding, verify your InferenceService is running:
+
+[source,bash]
+----
+# Check your InferenceService status
+oc get inferenceservice -n <your-namespace>
+
+# Verify the service is ready
+oc get inferenceservice <your-model-name> -n <your-namespace> \
+  -o jsonpath='{.status.conditions[?(@.type=="Ready")].status}'
+----
+
+The output should be `True`. If not, troubleshoot your deployment before continuing.
+====
+
+== Lab Structure
+
+This lab is organized into four sequential modules:
+
+=== Module 1: Multi-Language Evaluation
+
+Evaluate your model's accuracy across English, Spanish, and Japanese using standardized benchmarks. This module uses **TrustyAI LMEvalJob** to run accuracy tests and measure task-level performance.
+
+**What you'll learn:**
+* How to configure and run TrustyAI evaluation jobs
+* How to interpret accuracy metrics across languages
+* How to identify language-specific performance gaps
+
+=== Module 2: Performance Benchmarking
+
+Measure your model's system performance using **GuideLLM**. This module tests latency, throughput, and resource utilization under realistic load conditions.
+
+**What you'll learn:**
+* How to run GuideLLM performance benchmarks
+* How to interpret latency and throughput metrics
+* How to identify performance bottlenecks
+
+=== Module 3: Domain-Specific Evaluation
+
+Run custom evaluations tailored to your business domain. This module shows you how to create and execute domain-specific evaluation tasks.
+
+**What you'll learn:**
+* How to create custom evaluation datasets
+* How to configure domain-specific evaluation jobs
+* How to measure model performance on business-relevant tasks
+
+=== Module 4: Results Collection & Visualization
+
+Collect evaluation results from S3 and create visualizations to compare models. This module uses Jupyter notebooks to analyze and visualize evaluation data.
+
+**What you'll learn:**
+* How to retrieve evaluation results from S3
+* How to create comparison visualizations
+* How to generate evaluation reports for stakeholders
+
+== Expected Outcomes
+
+By the end of this lab, you will have:
+
+* Run comprehensive evaluations across accuracy, performance, and domain knowledge
+* Stored all evaluation results in S3 for future reference
+* Created visualizations comparing your model's performance
+* Generated evaluation reports suitable for stakeholder review
+
+== Lab Environment
+
+This lab assumes you are working in an OpenShift AI environment with:
+
+* A deployed model (from rhoai3-deploy course)
+* Model Registry configured (from rhoai3-registry course)
+* S3 storage available for results
+* TrustyAI operator installed and configured
+* Access to create Tekton TaskRuns for GuideLLM benchmarks
+
+[NOTE]
+.All Command-Line Focus
+====
+This lab is designed to be completed entirely from the command line, with the exception of Module 4 (Results Visualization), which uses Jupyter notebooks for data analysis and visualization.
+====
+
+---
+*Ready to evaluate? Let's start with multi-language accuracy testing.*

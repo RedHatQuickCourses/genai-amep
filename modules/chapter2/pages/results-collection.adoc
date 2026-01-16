@@ -1,0 +1,409 @@
+= Results Collection & Visualization
+:navtitle: Results Collection & Visualization
+:toc: macro
+
+// Antora metadata
+:page-role: MLOps Engineer
+:description: Collect evaluation results from S3 and create visualizations for model comparison.
+
+[.lead]
+*Data without visualization is just numbers. Visualization turns data into decisions.*
+
+In this module, you will collect all your evaluation results from S3 storage and create comprehensive visualizations to compare model performance across accuracy, performance, and domain knowledge. This is the only module that uses Jupyter notebooks, as visual comparison is best done interactively.
+
+== Why Visualization Matters
+
+Evaluation results stored in S3 are valuable, but raw JSON files don't tell a story. Visualization helps you:
+
+* **Compare Models:** See how different models perform side-by-side
+* **Identify Trends:** Spot performance patterns across languages or domains
+* **Communicate Results:** Create stakeholder-ready reports and dashboards
+* **Make Decisions:** Use visual evidence to select the best model for production
+
+== Prerequisites
+
+Before starting, ensure:
+
+* You have completed the previous evaluation labs:
+** xref:multilang-evaluation-lab.adoc[Multi-Language Evaluation]
+** xref:performance-evaluation-lab.adoc[Performance Benchmarking]
+** xref:domain-evaluation-lab.adoc[Domain-Specific Evaluation]
+* Results are stored in S3
+* You have access to a Jupyter notebook environment (OpenShift AI Workbench)
+* You know the S3 bucket and path where results are stored
+
+== Step 1: Access Jupyter Workbench
+
+Open your OpenShift AI Workbench:
+
+[source,bash]
+----
+# Get the workbench route
+oc get route -n redhat-ods-applications | grep workbench
+
+# Or access via OpenShift AI Dashboard
+# Navigate to: Workbenches → Create Workbench → Jupyter
+----
+
+Create a new Jupyter notebook or use the provided evaluation analysis notebook.
+
+== Step 2: Install Required Libraries
+
+In your Jupyter notebook, install the required Python libraries:
+
+[source,python]
+----
+# Install required packages
+!pip install -q pandas matplotlib seaborn plotly boto3 s3fs
+
+import json
+import os
+from pathlib import Path
+from datetime import datetime
+from typing import Dict, List, Optional
+
+import pandas as pd
+import matplotlib.pyplot as plt
+import seaborn as sns
+import plotly.graph_objects as go
+import plotly.express as px
+from plotly.subplots import make_subplots
+import boto3
+from botocore.exceptions import ClientError
+
+# Set style
+sns.set_style("whitegrid")
+plt.rcParams['figure.figsize'] = (12, 6)
+
+print("✅ Dependencies loaded successfully")
+----
+
+== Step 3: Configure S3 Access
+
+Configure S3 access in your notebook:
+
+[source,python]
+----
+# S3 Configuration
+S3_CONFIG = {
+    'endpoint_url': os.environ.get('S3_ENDPOINT_URL', 'http://minio-service.s3-storage.svc.cluster.local:9000'),
+    'bucket': os.environ.get('S3_BUCKET', 'model-evaluations'),
+    'access_key': os.environ.get('AWS_ACCESS_KEY_ID', 'minio'),
+    'secret_key': os.environ.get('AWS_SECRET_ACCESS_KEY', 'minio123'),
+}
+
+# Initialize S3 client
+s3_client = boto3.client(
+    's3',
+    endpoint_url=S3_CONFIG['endpoint_url'],
+    aws_access_key_id=S3_CONFIG['access_key'],
+    aws_secret_access_key=S3_CONFIG['secret_key']
+)
+
+print(f"✅ S3 client initialized for bucket: {S3_CONFIG['bucket']}")
+----
+
+[NOTE]
+.Using Data Connections
+====
+If you're using OpenShift AI Data Connections, you can mount the S3 connection directly to your workbench instead of using credentials in code.
+====
+
+== Step 4: Load Evaluation Results
+
+Create functions to load results from S3:
+
+[source,python]
+----
+def load_multilang_results(model_id: str, timestamp: str) -> Dict:
+    """Load multi-language evaluation results from S3"""
+    results = {}
+    languages = ['en', 'es', 'ja']
+    
+    for lang in languages:
+        key = f"multilang/{model_id}/{timestamp}/{lang}/results.json"
+        try:
+            response = s3_client.get_object(
+                Bucket=S3_CONFIG['bucket'],
+                Key=key
+            )
+            results[lang] = json.loads(response['Body'].read())
+            print(f"✅ Loaded {lang} results")
+        except ClientError as e:
+            print(f"⚠️  {lang} results not found: {e}")
+    
+    return results
+
+def load_performance_results(model_id: str, timestamp: str) -> Dict:
+    """Load performance benchmark results from S3"""
+    key = f"performance/{model_id}/{timestamp}/performance-results.yaml"
+    try:
+        response = s3_client.get_object(
+            Bucket=S3_CONFIG['bucket'],
+            Key=key
+        )
+        # Parse YAML (you may need to install pyyaml)
+        import yaml
+        results = yaml.safe_load(response['Body'].read())
+        print("✅ Loaded performance results")
+        return results
+    except ClientError as e:
+        print(f"⚠️  Performance results not found: {e}")
+        return None
+
+def load_domain_results(model_id: str, timestamp: str) -> Dict:
+    """Load domain-specific evaluation results from S3"""
+    # List files in domain results directory
+    prefix = f"domain/{model_id}/{timestamp}/"
+    try:
+        response = s3_client.list_objects_v2(
+            Bucket=S3_CONFIG['bucket'],
+            Prefix=prefix
+        )
+        
+        results = {}
+        for obj in response.get('Contents', []):
+            if obj['Key'].endswith('.json'):
+                file_response = s3_client.get_object(
+                    Bucket=S3_CONFIG['bucket'],
+                    Key=obj['Key']
+                )
+                results[obj['Key'].split('/')[-1]] = json.loads(file_response['Body'].read())
+        
+        print(f"✅ Loaded {len(results)} domain result files")
+        return results
+    except ClientError as e:
+        print(f"⚠️  Domain results not found: {e}")
+        return None
+
+# Load your results (update with your model ID and timestamp)
+MODEL_ID = "granite-4.0-micro_v1.0"
+TIMESTAMP = "20240101_120000"  # Update with your timestamp
+
+multilang_results = load_multilang_results(MODEL_ID, TIMESTAMP)
+performance_results = load_performance_results(MODEL_ID, TIMESTAMP)
+domain_results = load_domain_results(MODEL_ID, TIMESTAMP)
+----
+
+== Step 5: Create Multi-Language Comparison Visualization
+
+Visualize accuracy across languages:
+
+[source,python]
+----
+# Extract accuracy metrics
+def extract_accuracy_metrics(results: Dict) -> pd.DataFrame:
+    """Extract accuracy metrics from multi-language results"""
+    data = []
+    
+    for lang, lang_data in results.items():
+        if 'results' in lang_data:
+            for task, metrics in lang_data['results'].items():
+                if isinstance(metrics, dict) and 'acc' in metrics:
+                    data.append({
+                        'language': lang,
+                        'task': task,
+                        'accuracy': metrics['acc']
+                    })
+    
+    return pd.DataFrame(data)
+
+# Create comparison chart
+if multilang_results:
+    df_accuracy = extract_accuracy_metrics(multilang_results)
+    
+    fig = px.bar(
+        df_accuracy,
+        x='task',
+        y='accuracy',
+        color='language',
+        barmode='group',
+        title='Model Accuracy Comparison Across Languages',
+        labels={'accuracy': 'Accuracy Score', 'task': 'Benchmark Task'},
+        height=500
+    )
+    
+    fig.update_layout(
+        xaxis_tickangle=-45,
+        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
+    )
+    
+    fig.show()
+----
+
+== Step 6: Create Performance Dashboard
+
+Visualize performance metrics:
+
+[source,python]
+----
+# Extract performance metrics
+def extract_performance_metrics(results: Dict) -> pd.DataFrame:
+    """Extract performance metrics from GuideLLM results"""
+    # Parse GuideLLM results format
+    # Adjust based on your actual results structure
+    metrics = []
+    
+    if results and 'throughput' in results:
+        metrics.append({
+            'metric': 'Requests Per Second',
+            'value': results['throughput'].get('rps', 0),
+            'category': 'Throughput'
+        })
+        metrics.append({
+            'metric': 'Tokens Per Second',
+            'value': results['throughput'].get('tps', 0),
+            'category': 'Throughput'
+        })
+    
+    if results and 'latency' in results:
+        metrics.append({
+            'metric': 'Time to First Token (ms)',
+            'value': results['latency'].get('ttft_ms', 0),
+            'category': 'Latency'
+        })
+        metrics.append({
+            'metric': 'Inter-Token Latency (ms)',
+            'value': results['latency'].get('itl_ms', 0),
+            'category': 'Latency'
+        })
+    
+    return pd.DataFrame(metrics)
+
+# Create performance dashboard
+if performance_results:
+    df_perf = extract_performance_metrics(performance_results)
+    
+    fig = px.bar(
+        df_perf,
+        x='metric',
+        y='value',
+        color='category',
+        title='Model Performance Metrics',
+        labels={'value': 'Metric Value', 'metric': 'Performance Metric'},
+        height=400
+    )
+    
+    fig.show()
+----
+
+== Step 7: Create Comprehensive Comparison Report
+
+Generate a comprehensive report comparing all metrics:
+
+[source,python]
+----
+# Create comparison report
+report_data = []
+
+# Add multi-language accuracy summary
+if multilang_results:
+    for lang, lang_data in multilang_results.items():
+        if 'results' in lang_data:
+            avg_accuracy = sum(
+                m.get('acc', 0) for m in lang_data['results'].values() 
+                if isinstance(m, dict) and 'acc' in m
+            ) / len([m for m in lang_data['results'].values() if isinstance(m, dict) and 'acc' in m])
+            
+            report_data.append({
+                'Category': 'Accuracy',
+                'Metric': f'{lang.upper()} Average Accuracy',
+                'Value': f'{avg_accuracy:.2%}',
+                'Model': MODEL_ID
+            })
+
+# Add performance summary
+if performance_results:
+    if 'throughput' in performance_results:
+        report_data.append({
+            'Category': 'Performance',
+            'Metric': 'Requests Per Second',
+            'Value': f"{performance_results['throughput'].get('rps', 0):.2f}",
+            'Model': MODEL_ID
+        })
+
+# Create report DataFrame
+df_report = pd.DataFrame(report_data)
+
+# Display report
+print("\n" + "="*60)
+print("COMPREHENSIVE EVALUATION REPORT")
+print("="*60)
+print(f"Model: {MODEL_ID}")
+print(f"Evaluation Date: {TIMESTAMP}")
+print("="*60)
+print(df_report.to_string(index=False))
+print("="*60)
+----
+
+== Step 8: Export Visualization Report
+
+Export your visualizations as HTML or PDF:
+
+[source,python]
+----
+# Create comprehensive dashboard
+from plotly.subplots import make_subplots
+
+fig = make_subplots(
+    rows=2, cols=2,
+    subplot_titles=('Accuracy by Language', 'Performance Metrics', 
+                    'Domain Evaluation', 'Summary'),
+    specs=[[{"type": "bar"}, {"type": "bar"}],
+           [{"type": "table"}, {"type": "indicator"}]]
+)
+
+# Add charts (customize based on your data)
+# ... add your visualizations ...
+
+# Export as HTML
+fig.write_html("evaluation-dashboard.html")
+print("✅ Dashboard exported to evaluation-dashboard.html")
+
+# Or export as PDF (requires additional libraries)
+# fig.write_image("evaluation-dashboard.pdf")
+----
+
+== Comparing Multiple Models
+
+To compare multiple models, load results for each and create side-by-side comparisons:
+
+[source,python]
+----
+# Load results for multiple models
+models = [
+    {"id": "granite-4.0-micro_v1.0", "timestamp": "20240101_120000", "name": "Granite 4.0 Micro"},
+    {"id": "granite-8b_v1.0", "timestamp": "20240101_130000", "name": "Granite 8B"},
+]
+
+comparison_data = []
+
+for model in models:
+    results = load_multilang_results(model["id"], model["timestamp"])
+    # Extract and add to comparison_data
+    # ...
+
+# Create comparison visualization
+df_comparison = pd.DataFrame(comparison_data)
+
+fig = px.bar(
+    df_comparison,
+    x='model',
+    y='accuracy',
+    color='language',
+    barmode='group',
+    title='Model Comparison: Accuracy Across Languages'
+)
+
+fig.show()
+----
+
+== Next Steps
+
+* Share your evaluation dashboard with stakeholders
+* Use results to inform model selection decisions
+* Track evaluation results over time to measure model improvements
+* Integrate evaluation workflows into your CI/CD pipeline
+
+---
+*Evaluation complete. You now have comprehensive insights into your model's performance.*

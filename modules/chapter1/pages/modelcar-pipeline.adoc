@@ -8,7 +8,6 @@ The ModelCar pipeline automates the workflow of downloading models from Hugging 
 
 . Clean up workspace
 . Download model from Hugging Face
-. Compress model (optional)
 . Upload model to S3 storage (under `model-data/` folder)
 . Register model in RHOAI Model Registry
 
@@ -53,45 +52,38 @@ oc create secret generic s3-credentials \
 
 === Create Required ConfigMaps
 
-The pipeline requires ConfigMaps for compression and registration scripts:
+The pipeline requires a ConfigMap for the S3 registration script:
 
 [source,bash]
 ----
-# Create compress-script ConfigMap (optional, only if using compression)
-oc create configmap compress-script \
-  --from-file=compress.py=deploy/tasks/compress/compress.py \
-  -n modelcar-pipelines
-
 # Create S3 registration script ConfigMap
 oc create configmap register-s3-script \
   --from-file=register_s3_model.py=deploy/tasks/register-with-registry/register_s3_model.py \
   -n modelcar-pipelines
 ----
 
-=== Create ServiceAccount
+=== Create ServiceAccount and RBAC
 
-The pipeline needs a ServiceAccount for accessing the workspace and registry:
+The pipeline needs a ServiceAccount with proper permissions for accessing the workspace, secrets, and Model Registry:
 
 [source,bash]
 ----
-# Create ServiceAccount
-oc create serviceaccount modelcar-pipeline -n modelcar-pipelines
+# Create ServiceAccount with RBAC permissions
+oc apply -f deploy/openshift/modelcar-rbac.yaml
 ----
+
+This creates:
+
+* ServiceAccount: `modelcar-pipeline`
+* Role: `modelcar-pipeline-role` (namespace-scoped permissions)
+* RoleBinding: `modelcar-pipeline-binding`
+* ClusterRole: `modelcar-model-registry-access` (for cross-namespace Model Registry access)
+* ClusterRoleBinding: `modelcar-model-registry-access`
 
 [NOTE]
 ====
 The ModelCar pipeline stores models in S3 and registers them in the Model Registry. For model deployment and evaluation, use the xref:benchmark-pipeline.adoc[Benchmark Pipeline].
 ====
-
-=== Deploy Pipeline Tasks
-
-Deploy the individual Tekton tasks that the pipeline references:
-
-[source,bash]
-----
-# Deploy compression task (optional, only needed if using COMPRESS_MODEL=true)
-oc apply -f deploy/openshift/modelcar-compress-task.yaml -n modelcar-pipelines
-----
 
 === Deploy Main Pipeline
 
@@ -102,16 +94,28 @@ Deploy the main ModelCar pipeline:
 oc apply -f deploy/openshift/modelcar-pipeline.yaml -n modelcar-pipelines
 ----
 
-=== Verify Pipeline Deployment
+==== Verify Pipeline Deployment
 
-Check that all tasks and the pipeline are created:
+Check that the pipeline and all components are created:
 
 [source,bash]
 ----
-oc get tasks -n modelcar-pipelines
+# Check pipeline
 oc get pipelines -n modelcar-pipelines
-oc get configmaps -n modelcar-pipelines | grep -E "(compress-script|register-script)"
+
+# Check ConfigMaps
+oc get configmaps -n modelcar-pipelines | grep register-s3-script
+
+# Check ServiceAccount and RBAC
 oc get serviceaccount modelcar-pipeline -n modelcar-pipelines
+oc get role modelcar-pipeline-role -n modelcar-pipelines
+oc get clusterrole modelcar-model-registry-access
+
+# Check storage
+oc get pvc modelcar-storage -n modelcar-pipelines
+
+# Check secrets
+oc get secret s3-credentials -n modelcar-pipelines
 ----
 
 == Running the ModelCar Pipeline
@@ -155,47 +159,6 @@ EOF
 ----
 
 NOTE: The model will be uploaded to S3 at the path: `s3://models/model-data/granite-3.3-2b-instruct/1.0.0/`
-
-=== Pipeline with Model Compression
-
-To compress the model before uploading to S3:
-
-[source,bash]
-----
-oc create -f - <<EOF
-apiVersion: tekton.dev/v1beta1
-kind: PipelineRun
-metadata:
-  generateName: modelcar-compress-run-
-  namespace: modelcar-pipelines
-spec:
-  pipelineRef:
-    name: modelcar-pipeline
-  params:
-    - name: HUGGINGFACE_MODEL
-      value: "ibm-granite/granite-3.3-8b-instruct"
-    - name: MODEL_NAME
-      value: "granite-3.3-8b-instruct-compressed"
-    - name: MODEL_VERSION
-      value: "1.0.0"
-    - name: COMPRESS_MODEL
-      value: "true"
-    - name: MODEL_REGISTRY_URL
-      value: "http://mysql.rhoai-model-registries.svc.cluster.local:3306"
-    - name: S3_BUCKET
-      value: "models"
-    - name: S3_ENDPOINT_URL
-      value: "http://minio.minio.svc.cluster.local:9000"
-  workspaces:
-    - name: shared-workspace
-      persistentVolumeClaim:
-        claimName: modelcar-storage
-    - name: s3-credentials
-      secret:
-        secretName: s3-credentials
-EOF
-----
-
 
 === Pipeline with Gated Model
 

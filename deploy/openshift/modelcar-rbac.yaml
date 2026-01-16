@@ -1,0 +1,98 @@
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: modelcar-pipeline
+  namespace: modelcar-pipelines
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: modelcar-pipeline-role
+  namespace: modelcar-pipelines
+rules:
+  # Allow pipeline to manage its own resources
+  - apiGroups: [""]
+    resources:
+      - pods
+      - pods/log
+      - persistentvolumeclaims
+    verbs:
+      - get
+      - list
+      - watch
+  # Allow pipeline to read secrets
+  - apiGroups: [""]
+    resources:
+      - secrets
+    verbs:
+      - get
+      - list
+  # Allow pipeline to read configmaps
+  - apiGroups: [""]
+    resources:
+      - configmaps
+    verbs:
+      - get
+      - list
+  # Allow Tekton pipeline resources
+  - apiGroups: ["tekton.dev"]
+    resources:
+      - pipelineruns
+      - taskruns
+      - pipelines
+      - tasks
+    verbs:
+      - get
+      - list
+      - watch
+      - create
+      - update
+      - patch
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: modelcar-pipeline-binding
+  namespace: modelcar-pipelines
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: modelcar-pipeline-role
+subjects:
+  - kind: ServiceAccount
+    name: modelcar-pipeline
+    namespace: modelcar-pipelines
+---
+# ClusterRole for accessing Model Registry across namespaces
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: modelcar-model-registry-access
+rules:
+  # Allow access to Model Registry services
+  - apiGroups: [""]
+    resources:
+      - services
+    verbs:
+      - get
+      - list
+  # Allow service account token access
+  - apiGroups: [""]
+    resources:
+      - serviceaccounts/token
+    verbs:
+      - create
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: modelcar-model-registry-access
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: modelcar-model-registry-access
+subjects:
+  - kind: ServiceAccount
+    name: modelcar-pipeline
+    namespace: modelcar-pipelines
