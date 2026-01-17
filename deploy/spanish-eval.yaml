@@ -1,0 +1,31 @@
+apiVersion: trustyai.opendatahub.io/v1alpha1
+kind: LMEvalJob
+metadata:
+  name: multilang-spanish-eval
+  namespace: ${NAMESPACE}
+spec:
+  model: local-completions
+  taskList:
+    taskNames:
+      - belebele_spa_Latn
+      - xnli_es
+  modelArgs:
+    - name: model
+      value: ${MODEL_NAME}
+    - name: base_url
+      value: ${INFERENCE_URL}/v1/completions
+    - name: num_concurrent
+      value: '1'
+    - name: max_retries
+      value: '6'
+    - name: tokenized_requests
+      value: 'False'
+    - name: tokenizer
+      value: ibm-granite/granite-4.0-micro
+  logSamples: true
+  batchSize: '1'
+  allowOnline: true
+  allowCodeExecution: false
+  outputs:
+    pvcManaged:
+      size: 5Gi

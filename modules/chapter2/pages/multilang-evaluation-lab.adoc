@@ -60,7 +60,7 @@ First, we need to determine your model's inference endpoint URL.
 [source,bash]
 ----
 # Set your namespace (adjust as needed)
-export NAMESPACE="vllm"  # or your model namespace
+export NAMESPACE="rhoai-model-vllm-lab"  # or your model namespace
 export MODEL_NAME="granite-4.0-micro"  # your model name
 
 # Get the inference endpoint

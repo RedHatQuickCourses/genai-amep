@@ -65,55 +65,59 @@ This lab is organized into four sequential modules:
 Evaluate your model's accuracy across English, Spanish, and Japanese using standardized benchmarks. This module uses **TrustyAI LMEvalJob** to run accuracy tests and measure task-level performance.
 
 **What you'll learn:**
-* How to configure and run TrustyAI evaluation jobs
-* How to interpret accuracy metrics across languages
-* How to identify language-specific performance gaps
+
+ * How to configure and run TrustyAI evaluation jobs
+ * How to interpret accuracy metrics across languages
+ * How to identify language-specific performance gaps
 
 === Module 2: Performance Benchmarking
 
 Measure your model's system performance using **GuideLLM**. This module tests latency, throughput, and resource utilization under realistic load conditions.
 
 **What you'll learn:**
-* How to run GuideLLM performance benchmarks
-* How to interpret latency and throughput metrics
-* How to identify performance bottlenecks
+ 
+ * How to run GuideLLM performance benchmarks
+ * How to interpret latency and throughput metrics
+ * How to identify performance bottlenecks
 
 === Module 3: Domain-Specific Evaluation
 
 Run custom evaluations tailored to your business domain. This module shows you how to create and execute domain-specific evaluation tasks.
 
 **What you'll learn:**
-* How to create custom evaluation datasets
-* How to configure domain-specific evaluation jobs
-* How to measure model performance on business-relevant tasks
+
+*  How to create custom evaluation datasets
+*  How to configure domain-specific evaluation jobs
+*  How to measure model performance on business-relevant tasks
 
 === Module 4: Results Collection & Visualization
 
 Collect evaluation results from S3 and create visualizations to compare models. This module uses Jupyter notebooks to analyze and visualize evaluation data.
 
 **What you'll learn:**
-* How to retrieve evaluation results from S3
-* How to create comparison visualizations
-* How to generate evaluation reports for stakeholders
+
+ * How to retrieve evaluation results from S3
+ * How to create comparison visualizations
+ * How to generate evaluation reports for stakeholders
 
 == Expected Outcomes
 
 By the end of this lab, you will have:
 
-* Run comprehensive evaluations across accuracy, performance, and domain knowledge
-* Stored all evaluation results in S3 for future reference
-* Created visualizations comparing your model's performance
-* Generated evaluation reports suitable for stakeholder review
+ * Run comprehensive evaluations across accuracy, performance, and domain knowledge
+ * Stored all evaluation results in S3 for future reference
+ * Created visualizations comparing your model's performance
+ * Generated evaluation reports suitable for stakeholder review
 
 == Lab Environment
 
 This lab assumes you are working in an OpenShift AI environment with:
 
-* A deployed model (from rhoai3-deploy course)
-* Model Registry configured (from rhoai3-registry course)
-* S3 storage available for results
-* TrustyAI operator installed and configured
-* Access to create Tekton TaskRuns for GuideLLM benchmarks
+ * A deployed model (from rhoai3-deploy course)
+ * Model Registry configured (from rhoai3-registry course)
+ * S3 storage available for results
+ * TrustyAI operator installed and configured
+ * Access to create Tekton TaskRuns for GuideLLM benchmarks
 
 [NOTE]
 .All Command-Line Focus
